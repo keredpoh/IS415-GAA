@@ -1,7 +1,7 @@
 ---
 title: "In class exercise 4"
 date: '30 January 2023'
-date-modified: 'r Sys.date()'
+date-modified: '`r Sys.Date()`'
 execute: 
   eval: true
   echo: true
@@ -15,6 +15,7 @@ Getting started
 pacman::p_load(maptools, sf, raster, spatstat, tmap)
 ```
 
+# Importing the spatial data
 ```{r}
 childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>% st_transform(crs = 3414)
 ```
@@ -30,18 +31,86 @@ mpsz_sf <- st_read(dsn = "data",
                 layer = "MP14_SUBZONE_WEB_PL")
 ```
 
+# Converting sf data frames to sp's Spatial class
 ```{r}
 childcare <- as_Spatial(childcare_sf)
 mpsz <- as_Spatial(mpsz_sf)
 sg <- as_Spatial(sg_sf)
 ```
 
+# Converting the Spatial class into generic sp format
 ```{r}
 childcare_sp <- as(childcare, "SpatialPoints")
 sg_sp <- as(sg, "SpatialPolygons")
 ```
 
+# Converting the generic sp format into spatstat's ppp format
 ```{r}
 childcare_ppp <- as(childcare_sp, "ppp")
 childcare_ppp
 ```
+
+# Handling duplicate object
+```{r}
+childcare_ppp_jit <- rjitter(childcare_ppp, 
+                             retry=TRUE, 
+                             nsim=1, 
+                             drop=TRUE)
+
+any(duplicated(childcare_ppp_jit))
+```
+
+```{r}
+plot(childcare_ppp)
+```
+
+```{r}
+tmap_mode('view') +
+  tm_shape(childcare) +
+  tm_dots(alpha = 0.5,
+          size = 0.01) +
+  tm_view(set.zoom.limits = c(11,14))
+```
+
+# Creating owin object
+```{r}
+sg_owin <- as(sg_sp, "owin")
+```
+
+```{r}
+plot(sg_owin)
+```
+
+```{r}
+childcareSG_ppp = childcare_ppp[sg_owin]
+```
+
+# Computing kernel density estimation using automatic bandwidth selection method
+
+```{r}
+kde_childcareSG_bw <- density(childcareSG_ppp,
+                              sigma=bw.diggle,
+                              edge=TRUE,
+                            kernel="gaussian") 
+```
+
+```{r}
+plot(kde_childcareSG_bw)
+```
+
+```{r}
+bw <- bw.diggle(childcareSG_ppp)
+bw
+```
+
+# Rescalling KDE values
+
+```{r}
+childcareSG_ppp.km <- rescale(childcareSG_ppp, 1000, "km")
+```
+
+```{r}
+kde_childcareSG.bw <- density(childcareSG_ppp.km, sigma=bw.diggle, edge=TRUE, kernel="gaussian")
+plot(kde_childcareSG.bw)
+```
+

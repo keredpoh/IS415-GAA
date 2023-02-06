@@ -41,7 +41,7 @@ tmap_mode('plot')
 
 # 4.5 Geospatial Data wrangling
 
-## 4.5.1 Converting sf data frames to sp's Spatial\* class
+## 4.5.1 Converting sf data frames to sp's Spatial class
 
 ```{r}
 childcare <- as_Spatial(childcare_sf)
@@ -61,7 +61,7 @@ mpsz
 sg
 ```
 
-## 4.5.2 Converting the Spatial\* class into generic sp format
+## 4.5.2 Converting the Spatial class into generic sp format
 
 ```{r}
 childcare_sp <- as(childcare, "SpatialPoints")
