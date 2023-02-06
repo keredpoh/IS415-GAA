@@ -341,5 +341,12 @@
     "title": "IS415-GAA",
     "section": "",
     "text": "<!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’>     \n\n\n        0 0     false"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html",
+    "title": "In class exercise 5",
+    "section": "",
+    "text": "#Gettin started\n\npacman::p_load(tidyverse, tmap, sf, sfdep)\n\n#Importing data\n\nstudyArea <- st_read(dsn = 'data',\n                    layer = 'study_area') %>%\n  st_transform(crs = 3829)\n\nReading layer `study_area' from data source \n  `/Users/keredpoh/Desktop/keredpoh/IS415-GAA/In-class_Ex/In-class_Ex05/data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 7 features and 7 fields\nGeometry type: POLYGON\nDimension:     XY\nBounding box:  xmin: 121.4836 ymin: 25.00776 xmax: 121.592 ymax: 25.09288\nGeodetic CRS:  TWD97\n\n\n\nstores <- st_read(dsn = 'data',\n                    layer = 'stores') %>%\n  st_transform(crs = 3829)\n\nReading layer `stores' from data source \n  `/Users/keredpoh/Desktop/keredpoh/IS415-GAA/In-class_Ex/In-class_Ex05/data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 1409 features and 4 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 121.4902 ymin: 25.01257 xmax: 121.5874 ymax: 25.08557\nGeodetic CRS:  TWD97\n\n\n#Plotting of maps\n\ntmap_mode('view')\ntm_shape(studyArea) +\n  tm_polygons() +\n  tm_shape(stores) +\n    tm_dots(col = 'Name',\n           size = 0.01,\n           border.col = 'black',\n           border.lwd = 0.5) +\n  tm_view(set.zoom.limits = c(12,16))\n\n\n\n\n\n\n#Local Colocation Quotients (LCLQ)\n\nnb <- include_self(\n  st_knn(st_geometry(stores), 6))\n\nwt <- st_kernel_weights(nb, stores, 'gaussian',\n                         adaptive = TRUE)\n\nFamilyMart <- stores %>%\n  filter(Name == 'Family Mart')\n  \nA <- FamilyMart$Name\n\nSevenEleven <- stores %>%\n  filter(Name == '7-Eleven')\n\nB <- SevenEleven$Name\n\nLCLQ <- local_colocation(A, B, nb, wt, 49)\n\nLCLQ_stores <- cbind(stores, LCLQ)\n\n\ntmap_mode(\"view\") \n\ntm_shape(studyArea) +   \n  tm_polygons() +\n  tm_shape(LCLQ_stores) + \n  tm_dots(col = \"X7.Eleven\", size = 0.01,border.col = \"black\", border.lwd = 0.5) + \n  tm_view(set.zoom.limits = c(12,16))"
   }
 ]
