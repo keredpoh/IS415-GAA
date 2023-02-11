@@ -153,6 +153,7 @@ wp_sf_nga <- wp_sf %>%
 From the graph above, we are able to group the different data into functional and non functional.
 
 We will begin with functional Water Point.
+
 ```{r}
 wp_functional <- wp_sf_nga %>% 
   filter(status_clean %in%
@@ -162,6 +163,7 @@ wp_functional <- wp_sf_nga %>%
 ```
 
 Next, for Non-Functional Water Point.
+
 ```{r}
 wp_nonfunctional <- wp_sf_nga %>% 
   filter(status_clean %in% 
@@ -176,6 +178,7 @@ wp_nonfunctional <- wp_sf_nga %>%
 ### 3.1.1 sf to sc
 
 In this section, we will be mainly converting our data into spatial data, so that we can use it later on. The sf files earlier on will be now converted into sc (spatial class).
+
 ```{r}
 osun_sc<-as_Spatial(osun)
 osun_sc
@@ -190,6 +193,7 @@ nonfunc_wp_sc
 ### 3.1.2 sc to sp
 
 Next, we will be converting the sc (spatial class) into sp format.
+
 ```{r}
 osun_sp <- as(osun_sc, "SpatialPolygons")
 
@@ -201,6 +205,7 @@ nonfunc_wp_sp <-as(nonfunc_wp_sc, "SpatialPoints")
 ### 3.1.3 sp to ppp
 
 Finally, we will be converting generic sp format into spatstat's ppp format.
+
 ```{r}
 
 func_wp_ppp <- as(func_wp_sp, "ppp")
@@ -211,6 +216,7 @@ nonfunc_wp_ppp <- as(nonfunc_wp_sp,"ppp")
 ### 3.1.4 Check for Duplicates
 
 Let us check for duplicate points to be safe. Since there are no duplicates, we can move on.
+
 ```{r}
 any(duplicated(func_wp_ppp))
 
@@ -220,6 +226,7 @@ any(duplicated(nonfunc_wp_ppp))
 ## 3.2 Creating an Owin object
 
 From the sp conversion earlier, we are able to create the owin object.
+
 ```{r}
 owin_osun <- as(osun_sp, "owin")
 ```
@@ -227,6 +234,7 @@ owin_osun <- as(osun_sp, "owin")
 ### 3.2.1 Combine Points and Owin Object
 
 We can combine the points with the owin object. This will show us the points layered with the owin object for functional and non-functional water point respectively.
+
 ```{r}
 owin_func_wp_ppp <- func_wp_ppp[owin_osun]
 plot(owin_func_wp_ppp)
@@ -238,6 +246,7 @@ plot(owin_nonfunc_wp_ppp)
 ### 3.2.2 Scaling of KDE Value to Kilometer
 
 Scaling the data to km will enable us to visualise the data better.
+
 ```{r}
 kde_func_wp_bw.km <- rescale(owin_func_wp_ppp, 1000, "km")
 kde_nonfunc_wp_bw.km <- rescale(owin_nonfunc_wp_ppp, 1000, "km")
@@ -248,6 +257,7 @@ kde_nonfunc_wp_bw.km <- rescale(owin_nonfunc_wp_ppp, 1000, "km")
 ## 4.1 1st Order Point Spatial Patterns
 
 We will be computing the kernel density estimate with non-functional and functional water point side by side.
+
 ```{r}
 
 kde_nonfunc_wp_bw <- density(kde_nonfunc_wp_bw.km,
@@ -268,6 +278,7 @@ plot(kde_func_wp_bw, main = "Functional Water Points")
 ### 4.1.2 Converting KDE output into grid object
 
 We convert it so that it is suitable for mapping purposes.
+
 ```{r}
 
 gridded_kde_func_wp_bw <- as.SpatialGridDataFrame.im(kde_func_wp_bw)
