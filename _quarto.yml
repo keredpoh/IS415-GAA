@@ -34,7 +34,7 @@ website:
 
 format:
   html:
-    theme: journal
+    theme: yeti
     css: styles.css
     toc: true
 
