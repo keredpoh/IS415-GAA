@@ -344,17 +344,21 @@ We will be using the L-function to calculate an estimate for a spatial point pat
 
 We will start with Functional Water Point
 
-```{r}
+```{r, eval = FALSE}
 L_fun = Lest(owin_func_wp_ppp, correction = "Ripley")
 plot(L_fun, . -r ~ r, ylab= "L(d)-r", xlab = "d(m)")
 ```
 
+![](images/L_fun.png)
+
 Next, Non-Functional Water Point
 
-```{r}
+```{r, eval = FALSE}
 L_nonfun = Lest(owin_nonfunc_wp_ppp, correction = "Ripley")
 plot(L_nonfun, . -r ~ r, ylab= "L(d)-r", xlab = "d(m)")
 ```
+
+![](images/L_nonfun.png)
 
 ## 5.1.2 Performing Complete Spatial Randomness Test
 
