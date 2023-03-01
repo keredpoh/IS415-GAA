@@ -8,6 +8,7 @@ execute:
   warning: false
 editor: visual
 ---
+
 ## Installing packages
 
 ```{r}
@@ -266,4 +267,3 @@ ggplot(data = ehsa,
        aes(x=classification)) + 
   geom_bar()
 ```
-

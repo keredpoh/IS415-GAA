@@ -1,0 +1,270 @@
+---
+title: "Take-home Exercise 2: Spatio-Temporal Analysis"
+date: "16 February 2023"
+date-modified: "`r Sys.Date()`"
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+Setting the Context
+
+# 1 Loading of Data
+
+We will be loading the packages in using the pacman::p_load function. This is the most efficient way of loading the packages.
+
+```{r}
+pacman::p_load(sf, funModeling,maptools,raster, spatstat, tmap , tidyverse, sfdep, readxl)
+```
+
+## 1.1 Data Sets
+
+We will be using 2 primary sets of data.
+
+| Data set   | Source                                                                                                                             | Description                                                                           |
+|-------------------|---------------------------|---------------------------|
+| Geospatial | [INDONESIA GEOSPASIAL](https://www.indonesia-geospasial.com/2020/04/download-shapefile-shp-batas-desa.html "INDONESIA GEOSPASIAL") | Sub-district of Indonesia                                                             |
+| Aspatial   | [Riwayat File Vaksinasi DKI Jakarta](https://riwayat-file-vaksinasi-dki-jakarta-jakartagis.hub.arcgis.com/)                        | Monthly numbers of vaccinated people from July 2021 to June 2022 (sub-district level) |
+
+## 1.2 Geospatial Data
+
+We will be loading the Geospatial data while converting it to the proper crs format.
+
+```{r}
+geoJKT <- st_read(dsn = "data/geospatial/", layer = "BATAS_DESA_DESEMBER_2019_DUKCAPIL_DKI_JAKARTA") %>%   st_transform(crs=23878)
+```
+
+### 1.2.1 Checking Missing Values
+
+We should never assume that the data set provided has no missing values. We check the values in this code chunk and realise that there are actually 14 na values. We will change it in the later portions.
+
+```{r}
+  which((is.na(geoJKT)) == TRUE) %>%
+  length()
+```
+
+### 1.2.2 Trimming Outer Island
+
+Let us visualise the original polygon. Notice that there are several island that we do not want, as we are only focusing on the main sub-districts of Jakarta, or mainland for short.
+
+```{r}
+qtm(geoJKT)
+```
+
+From using the View() function, we can see the different columns of geoJKT. With the help of Google translate, we can see that KAB KOTA means city district.
+
+![](images/Image%201-3-23%20at%2011.37%20AM-01.jpeg)
+
+From there, we can further derive that KEPULAUAN SERIBU means outer island, which is something that we do not want for the scope of this assignment. We will use filter() to remove it.
+
+```{r}
+geoJKT <- filter(geoJKT, KAB_KOTA != "KEPULAUAN SERIBU") 
+geoJKT
+```
+
+### 1.2.3 Filling up NA values
+
+From looking at View(geoJKT), we see that the 14 NA values are associated with rows 243 and 244. Let us insert the necessary values.
+
+```{r}
+geoJKT$KAB_KOTA[243]<-"JAKARTA UTARA"
+geoJKT$KAB_KOTA[244]<-"JAKARTA UTARA"
+
+geoJKT$KODE_DESA[243]<-"3188888801"
+geoJKT$KODE_DESA[244]<-"3188888802"
+```
+
+### 1.2.4 Visualising of Map
+
+As shown in the plot, there are no NA values, or outer island. that means that we have successfully removed the outer island and NA values.
+
+```{r}
+tmap_mode("plot")
+tm_shape(geoJKT) + 
+  tm_polygons("KAB_KOTA")
+```
+
+### 1.2.5 Choosing relavent fields
+
+For the scope of this assignment, let us retain the first 9 columns from geoJKT using select().
+
+```{r}
+geoJKT <- geoJKT %>%
+  select(1:9)
+```
+
+### 1.2.6 Translating columns
+
+As the columns are not in English, let us translate and change the name using rename().
+
+```{r}
+geoJKT <- geoJKT %>% 
+  dplyr::rename(
+    'village_code' = 'KODE_DESA',
+    'subdistrict' = 'KECAMATAN')
+```
+
+## 1.3 Aspatial Data
+
+As mentioned earlier, we will be using data from [Riwayat File Vaksinasi DKI Jakarta](https://riwayat-file-vaksinasi-dki-jakarta-jakartagis.hub.arcgis.com/). We will be looking at data from the start of July 2021 till the end of June 2022.
+
+### 1.3.1 Loading Aspatial data
+
+```{r}
+setwd("data/aspatial/") 
+
+files <- list.files(pattern = ".xlsx")
+
+for (file in files) {
+  assign(gsub(".xlsx", "", file), read_excel(file))
+}
+```
+
+### 1.3.2 Columns in each data set
+
+We can use names() to view the true nature of each name as it is sometimes hidden when we view the table alone.
+
+```{r}
+names(`Data Vaksinasi Berbasis Kelurahan (01 Desember 2021)`)
+```
+
+### 1.3.3 Crafting a function for wrangling
+
+As there are 12 different data sets, data wrangling is not as simple.
+
+-   we will have to combine them together using a list
+
+-   select relevant columns
+
+-   translating to English
+
+-   mutate a new column for total population & vaccination rate
+
+-   create a date column for each data set.
+
+```{r}
+wrangle_function <-function(data){
+ df_name <- deparse(substitute(data))
+ wrangle<- data %>% 
+   select( `KODE KELURAHAN`, 
+          `WILAYAH KOTA`, 
+          KECAMATAN, 
+          KELURAHAN, 
+          `BELUM VAKSIN`, 
+          SASARAN) %>% 
+   rename(village_code = `KODE KELURAHAN`, 
+          city_region =`WILAYAH KOTA`, 
+          subdistrict = `KECAMATAN`, 
+          district = `KELURAHAN`, 
+          target_vaccination = `SASARAN`, 
+          not_vaccinated = `BELUM VAKSIN`) %>% 
+  mutate(total_population = target_vaccination) %>% 
+  mutate(vaccination_rate = (target_vaccination-not_vaccinated)/total_population)
+ return(wrangle)
+}
+```
+
+Let us manually input the month according to chronological order, and run the data frames through the function we just created. We will also be using as.Date() to ensure the date format.
+
+```{r}
+list_month <- list(`Data Vaksinasi Berbasis Kelurahan (01 Juli 2021)`, `Data Vaksinasi Berbasis Kelurahan (1 Agustus 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 September 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Oktober 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 November 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Desember 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Januari 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Februari 2022)`, `Data Vaksinasi Berbasis Kelurahan (02 Maret 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 April 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Mei 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Juli 2021)`)
+
+date <- c("2021-7-1", "2021-8-1", "2021-9-1", "2021-10-1", "2021-11-1", "2021-12-1", "2022-1-1", "2022-2-1", "2022-3-1", "2022-4-1", "2022-5-1", "2022-6-1")
+
+lists <- list()
+
+for (i in c(1:12)){
+  lists[[i]] <- wrangle_function(list_month[[i]]) |> 
+    mutate(date = as.Date(date[i]),
+           .before = 1)
+}
+```
+
+### 1.3.4 Combination of Aspatial Data
+
+We will combine them into a single data frame using Reduce()
+
+```{r}
+aspatial <- Reduce(rbind, lists)
+glimpse(aspatial)
+```
+
+## 1.4 Merging Geospatial and Aspatial Data
+
+We will be merging both data sets by village codes, as it is present in both. Similarly to Geospatial data, we will have to filter out the outer island in Aspatial data, categorised by KAB.ADM.KEP.SERIBU as it is not present in the Geospatial data.
+
+```{r}
+unique(aspatial$city_region)
+```
+
+We will remove it through filter()
+
+```{r}
+aspatial <- aspatial %>% 
+   filter(city_region != "KAB.ADM.KEP.SERIBU") 
+unique(aspatial$city_region) 
+```
+
+We use setdiff() to see what is present in geoJKT which is not in aspatial.
+
+```{r}
+setdiff(geoJKT$village_code, aspatial$village_code)
+```
+
+We will manually add the two sub districts so that both data frames will match after joining.
+
+```{r}
+aspatial <- rbind(aspatial, c("2021-07-01", 3188888801,NA),
+                       c("2021-08-01", 3188888801,NA),
+                       c("2021-09-01", 3188888801,NA),
+                       c("2021-10-01", 3188888801,NA),
+                       c("2021-11-01", 3188888801,NA),
+                       c("2021-12-01", 3188888801,NA),
+                       c("2022-01-01", 3188888801,NA),
+                       c("2022-02-01", 3188888801,NA),
+                       c("2022-03-01", 3188888801,NA),
+                       c("2022-04-01", 3188888801,NA),
+                       c("2022-05-01", 3188888801,NA),
+                       c("2022-06-01", 3188888801,NA),
+                       c("2021-07-01", 3188888802,NA),
+                       c("2021-08-01", 3188888802,NA),
+                       c("2021-09-01", 3188888802,NA),
+                       c("2021-10-01", 3188888802,NA),
+                       c("2021-11-01", 3188888802,NA),
+                       c("2021-12-01", 3188888802,NA),
+                       c("2022-01-01", 3188888802,NA),
+                       c("2022-02-01", 3188888802,NA),
+                       c("2022-03-01", 3188888802,NA),
+                       c("2022-04-01", 3188888802,NA),
+                       c("2022-05-01", 3188888802,NA),
+                       c("2022-06-01", 3188888802,NA))
+```
+
+Indeed, there are no NA values. We are good to go.
+
+```{r}
+setdiff(geoJKT$subdistrict, aspatial$subdistrict)
+```
+
+Let us finally join both datasets using left_join() by village code
+
+```{r}
+vaccinationJKT <- left_join(aspatial, geoJKT, 
+                         by = c("village_code", "subdistrict")) %>%
+  mutate(vaccination_rate = as.numeric(vaccination_rate)) %>%
+  st_as_sf()
+```
+
+We will then select the important columns
+
+```{r}
+vaccinationJKT %>%
+  select(date, village_code, subdistrict, vaccination_rate)
+```
+
+# 2 Chloropleth mapping
+
+## 2.1 Creating a tmap function
