@@ -10,7 +10,11 @@ execute:
 editor: visual
 ---
 
-Setting the Context
+# Setting the Context
+
+We will be exploring vaccination rates in DKI Jarkarta, while identifying sub-districts with how the vaccination rate changes over time.
+
+We will be mainly using Choropleth Mapping and Analysis, Local Gi analysis, and Emerging Hot Spot Analysis (EHSA) with the aim of discovering Spatio-Temporal trends.
 
 # 1 Loading of Data
 
@@ -116,9 +120,9 @@ As mentioned earlier, we will be using data from [Riwayat File Vaksinasi DKI Jak
 ```{r}
 setwd("data/aspatial/") 
 
-files <- list.files(pattern = ".xlsx")
+aspatial <- list.files(pattern = ".xlsx")
 
-for (file in files) {
+for (file in aspatial) {
   assign(gsub(".xlsx", "", file), read_excel(file))
 }
 ```
@@ -145,39 +149,21 @@ As there are 12 different data sets, data wrangling is not as simple.
 
 -   create a date column for each data set.
 
-```{r}
-wrangle_function <-function(data){
- df_name <- deparse(substitute(data))
- wrangle<- data %>% 
-   select( `KODE KELURAHAN`, 
-          `WILAYAH KOTA`, 
-          KECAMATAN, 
-          KELURAHAN, 
-          `BELUM VAKSIN`, 
-          SASARAN) %>% 
-   rename(village_code = `KODE KELURAHAN`, 
-          city_region =`WILAYAH KOTA`, 
-          subdistrict = `KECAMATAN`, 
-          district = `KELURAHAN`, 
-          target_vaccination = `SASARAN`, 
-          not_vaccinated = `BELUM VAKSIN`) %>% 
-  mutate(total_population = target_vaccination) %>% 
-  mutate(vaccination_rate = (target_vaccination-not_vaccinated)/total_population)
- return(wrangle)
-}
-```
-
 Let us manually input the month according to chronological order, and run the data frames through the function we just created. We will also be using as.Date() to ensure the date format.
 
 ```{r}
-list_month <- list(`Data Vaksinasi Berbasis Kelurahan (01 Juli 2021)`, `Data Vaksinasi Berbasis Kelurahan (1 Agustus 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 September 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Oktober 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 November 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Desember 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Januari 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Februari 2022)`, `Data Vaksinasi Berbasis Kelurahan (02 Maret 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 April 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Mei 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Juli 2021)`)
+month_list <- list(`Data Vaksinasi Berbasis Kelurahan (01 Juli 2021)`, `Data Vaksinasi Berbasis Kelurahan (1 Agustus 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 September 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Oktober 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 November 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Desember 2021)`, `Data Vaksinasi Berbasis Kelurahan (01 Januari 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Februari 2022)`, `Data Vaksinasi Berbasis Kelurahan (02 Maret 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 April 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Mei 2022)`, `Data Vaksinasi Berbasis Kelurahan (01 Juni 2022)`)
 
 date <- c("2021-7-1", "2021-8-1", "2021-9-1", "2021-10-1", "2021-11-1", "2021-12-1", "2022-1-1", "2022-2-1", "2022-3-1", "2022-4-1", "2022-5-1", "2022-6-1")
 
 lists <- list()
-
 for (i in c(1:12)){
-  lists[[i]] <- wrangle_function(list_month[[i]]) |> 
+  lists[[i]] <- month_list[[i]] %>% 
+    rename(village_code =`KODE KELURAHAN`,
+           city_region =`WILAYAH KOTA`,
+           targeted = `SASARAN`, 
+           not_vaccinated =`BELUM VAKSIN`) %>%
+    select(village_code, city_region, not_vaccinated, targeted) %>%
     mutate(date = as.Date(date[i]),
            .before = 1)
 }
@@ -200,12 +186,13 @@ We will be merging both data sets by village codes, as it is present in both. Si
 unique(aspatial$city_region)
 ```
 
-We will remove it through filter()
+We will remove it through filter(), and make a new column which shows the vaccination rate, and select the rows needed
 
 ```{r}
 aspatial <- aspatial %>% 
-   filter(city_region != "KAB.ADM.KEP.SERIBU") 
-unique(aspatial$city_region) 
+   filter(city_region != "KAB.ADM.KEP.SERIBU") %>%
+  mutate(vaccination_rate = as.numeric((targeted-not_vaccinated)/targeted)) %>%
+  select(date, village_code, vaccination_rate)
 ```
 
 We use setdiff() to see what is present in geoJKT which is not in aspatial.
@@ -243,28 +230,431 @@ aspatial <- rbind(aspatial, c("2021-07-01", 3188888801,NA),
                        c("2022-06-01", 3188888802,NA))
 ```
 
-Indeed, there are no NA values. We are good to go.
-
-```{r}
-setdiff(geoJKT$subdistrict, aspatial$subdistrict)
-```
-
-Let us finally join both datasets using left_join() by village code
+Let us finally join both data sets using left_join() by village code
 
 ```{r}
 vaccinationJKT <- left_join(aspatial, geoJKT, 
-                         by = c("village_code", "subdistrict")) %>%
+                         by = c("village_code")) %>%
   mutate(vaccination_rate = as.numeric(vaccination_rate)) %>%
-  st_as_sf()
+   na.exclude() %>%
+   st_as_sf() 
+ 
 ```
 
 We will then select the important columns
 
 ```{r}
 vaccinationJKT %>%
-  select(date, village_code, subdistrict, vaccination_rate)
+  select(date, village_code, vaccination_rate)
 ```
 
 # 2 Chloropleth mapping
 
 ## 2.1 Creating a tmap function
+
+Creating a function will help us greatly, as there are 12 months of tmap plot to visualise.
+
+```{r}
+plotting <- function(i){
+  vac <- vaccinationJKT %>%
+    filter(date == i)
+  tm_shape(vac) +
+  tm_fill("vaccination_rate",
+          n = 10,
+          style = "quantile",
+          palette = "Blues",
+          title = "Vaccination Rate") +
+  tm_layout(main.title = paste(i),
+            main.title.position = "left",
+            legend.height = 0.7, 
+            legend.width = 0.9,
+            frame = TRUE) +
+  tm_borders(alpha = 0.5) +
+  tm_grid(alpha = 0.3)
+}
+```
+
+We will be splitting them into groups of 4, into 3 different section in chronological order so that we can visualise it easier
+
+```{r}
+tmap_mode("plot")
+tmap_arrange(plotting("2021-07-01"),
+             plotting("2021-08-01"),
+             plotting("2021-09-01"),
+             plotting("2021-10-01"),
+             ncol = 2)
+```
+
+```{r}
+tmap_arrange(plotting("2021-11-01"),
+             plotting("2021-12-01"),
+             plotting("2022-01-01"),
+             plotting("2022-02-01"),
+             ncol = 2)
+```
+
+```{r}
+tmap_arrange(plotting("2022-03-01"),
+             plotting("2022-04-01"),
+             plotting("2022-05-01"),
+             plotting("2022-06-01"),
+             ncol = 2)
+```
+
+## 2.2 Spatial Patterns from chloropleth map (not more than 200 words)
+
+We can tell that the vaccination rate in the southern area is now comparable to the rest of the area, as it was initially much lower as compared to the other sub districts.
+
+Overall, The choropleth map shows that vaccination rates in Jakarta have been increasing over time. This is seen from the way the bins have developed, where the lower limit has increased with time. This shows that the vaccination rate is increasing.
+
+From the span of 12 months (July 2021 to June 2022), we can see that the lower bound is 0.227 to 0.781, further proving the accuracy of the pattern.
+
+# 3 Local Gi Analysis 
+In this section, we will be creating spatial contiguity weights and neighbour list, with gstar output.
+
+## 3.1 Function to generate gstar values
+
+We will need a function to generate from all 12 months.
+
+## 3.1.1 Computing Contiguity Spatial Weights
+
+```{r}
+month <- vaccinationJKT %>%
+  filter(date == "2021-07-01")
+wm_q <- month %>%
+  na.exclude() %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_inverse_distance(nb, geometry,
+                                   scale = 1,
+                                   alpha = 1),
+                                  .before = 1)
+wm_q
+```
+
+## 3.1.2 Computing local GI
+
+We will be using set.seed() to ensure that the output will be the same
+
+```{r}
+set.seed(1234)
+july_LGI <- wm_q %>%
+  mutate(local_Gi = local_gstar_perm(vaccination_rate, nb, wt, nsim = 99), .before = 1) %>%
+  unnest(local_Gi)
+```
+
+## 3.1.3 Visualizing p-value of local Gi
+
+```{r}
+tmap_mode("plot")
+tm_shape(july_LGI) +
+    tm_polygons() +
+    tm_shape(july_LGI %>% filter(p_sim < 0.05)) +
+    tm_fill("gi_star") +
+    tm_borders(alpha = 0.5) +
+    tm_layout(main.title = paste("local Gi Significance", "(", july_LGI$date[1],")"),
+              main.title.size = 0.8)
+```
+
+## 3.1.4 local GI computation function
+
+Again, we add set.seed() to ensure that the output will always be the same
+
+```{r}
+local_gi <- function(x){
+  set.seed(1234)
+  month <- vaccinationJKT %>%
+    filter(date == x)
+  wm_q <- month %>%
+    na.exclude() %>%
+    mutate(nb = st_contiguity(geometry),
+           wt = st_inverse_distance(nb, geometry,
+                                   scale = 1,
+                                   alpha = 1))
+  result <- wm_q %>%
+    mutate(local_gi = local_gstar_perm(vaccination_rate,
+                                   nb,
+                                   wt,
+                                   nsim = 99),
+           .before = 1) %>% 
+    unnest(local_gi)
+  return(result)
+}
+```
+
+```{r}
+date <- c("2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01",
+          "2022-01-01", "2022-02-01", "2022-03-01","2022-04-01", "2022-05-01", "2022-06-01")
+month_GI <- list()
+for (i in 1:12){
+  month_GI[[i]] <- local_gi(date[i])
+}
+```
+
+## 3.1.5 Tmap Function
+
+```{r}
+gi_graph <- function(x){
+  HCSA_sig <- x %>%
+    filter(p_sim < 0.05)
+  HCSA_plots <- tm_shape(x) +
+    tm_polygons() +
+    tm_borders(alpha = 0.5) +
+    tm_shape(HCSA_sig) +
+      tm_fill("gi_star",
+              palette = "Reds",
+              midpoint = 0) +
+      tm_borders(alpha = 0.4) +
+    tm_layout(main.title = paste("significant local Gi", "(",x$date[1],")"),
+              main.title.size = 0.8)
+  return(HCSA_plots)
+}
+```
+
+We will now plot it according to chronological order.
+```{r}
+tmap_mode("plot")
+tmap_arrange(gi_graph(month_GI[[1]]),
+             gi_graph(month_GI[[2]]),
+             gi_graph(month_GI[[3]]),
+             gi_graph(month_GI[[4]]),
+             ncol = 2)
+```
+
+```{r}
+tmap_arrange(gi_graph(month_GI[[5]]),
+             gi_graph(month_GI[[6]]),
+             gi_graph(month_GI[[7]]),
+             gi_graph(month_GI[[8]]),
+             ncol = 2)
+```
+
+```{r}
+tmap_arrange(gi_graph(month_GI[[9]]),
+             gi_graph(month_GI[[10]]),
+             gi_graph(month_GI[[11]]),
+             gi_graph(month_GI[[12]]),
+             ncol = 2)
+```
+
+## 3.1.6 Statistical conclusions (not more than 250 words)
+
+We understand that a Gi value that has a significant and positive z-score is a hot spot, representing clustering of high values, and the opposite for cold spots as it has a significant negative z-score which represent clustering of low values.
+
+The cold areas at the center have persisted for quite a while, which may suggest that the sub district wide lack of vaccination knowledge or a shortage of medical resources. Should the Indonesian government choose to focus on where to increase vaccination rate, they can opt to invest more time into the targeted area of concern, with the help of this Gi map. However, overall vaccination rates have risen.
+
+# 4 Emerging Hot Spot Analysis (EHSA)
+
+## 4.1 Time series cube
+
+We can use spacetime() to create the time series cube, with reference to in-class Exercise 7
+
+```{r}
+vacc_rate_st <- as_spacetime(vaccinationJKT,
+                                .loc_col = "village_code",
+                                .time_col = "date")
+```
+
+## 4.2 Spatial weights
+
+```{r}
+vacc_rate_nb <- vacc_rate_st %>%
+  activate("geometry") %>%
+  mutate(
+    nb = include_self(st_contiguity(geometry)),
+    wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+                                 .before = 1) %>%
+                                set_nbs("nb") %>%
+                                set_wts("wt")
+```
+
+## 4.3 Computing the GI
+
+we will now use local_gstar_perm() to compute the Gi
+
+```{r}
+gi_s <- vacc_rate_nb %>%
+  group_by(date) %>%
+  mutate(vaccination_rate = as.numeric(vaccination_rate),
+         gi_star = local_gstar_perm(vaccination_rate, 
+                                    nb, 
+                                    wt, 
+                                    nsim = 99)) %>%
+                                    tidyr::unnest(gi_star)
+```
+
+## 4.4 Mann-Kendall Test
+
+We will now select 3 sub districts and describe the trends using the Mann-Kendall test 1) 3175061001 2) 3173011006 3) 3174071005
+
+### 4.4.1 First district
+
+```{r}
+dis_1 <- gi_s %>%
+  ungroup() %>%
+  filter(village_code == "3175061001") %>%
+  select(date, village_code, gi_star)
+```
+
+```{r}
+ggplot(data = dis_1, 
+       aes(x = date, 
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+```
+
+We will be mainly focusing on two outputs which are:
+
+tau : A measure of the strength and direction of the trend in the data. It ranges from -1 to 1, where a tau value of -1 indicates a strong negative trend, a tau value of 0 indicates no trend, and a tau value of 1 indicates a strong positive trend.
+
+sl : This is the p value and for it to be significant, it has to be less than significance level, 0.05.
+
+```{r}
+stat1 <- dis_1 %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>% 
+  tidyr::unnest_wider(mk)
+glimpse(stat1)
+```
+
+Conclusion for sub district 3175061001
+
+We see a positive tau value and an signifiant sl value as it is < 0.05. This means that there is a slight positive association in gi* values and date and it is statistically significant. It also implies that the vaccination rate has been increasing, and also greater clustering (hot spot).
+
+### 4.4.2 Second district
+
+We will be repeating the steps above for the second district as well.
+
+```{r}
+dis_2 <- gi_s %>%
+  ungroup() %>%
+  filter(village_code == "3173011006") %>%
+  select(date, village_code, gi_star)
+```
+
+```{r}
+ggplot(data = dis_2, 
+       aes(x = date, 
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+```
+
+```{r}
+stat2 <- dis_2 %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>% 
+  tidyr::unnest_wider(mk)
+glimpse(stat2)
+```
+
+Conclusion for sub district 3173011006 We see a slight negative tau value and an significant sl value as it is < 0.05. This means that there is a slight negative association in gi* values and date and it is statistically significant. This means that the vaccination rate in this sub district is decreasing (cold spot), and it is statistically significant.
+
+### 4.4.3 Third district
+
+```{r}
+dis_3 <- gi_s %>%
+  ungroup() %>%
+  filter(village_code == "3174071005") %>%
+  select(date, village_code, gi_star)
+```
+
+```{r}
+ggplot(data = dis_3, 
+       aes(x = date, 
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+```
+
+```{r}
+stat3 <- dis_3 %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>% 
+  tidyr::unnest_wider(mk)
+glimpse(stat3)
+```
+
+Conclusion for sub district 3174071005 We see a negative tau value and an significant sl value as it is < 0.05. This means that there is a negative association in gi* values and date and it is statistically significant. This also means that the vaccination rate in this sub district is decreasing (cold spot).
+
+## 4.5 Emerging Hotspot Analysis
+
+We will now run the analysis using MannKendall() again, while filtering by significant sl values
+
+```{r}
+ehsa <- gi_s %>%
+  group_by(date) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk) %>%
+  filter(sl < 0.05)
+```
+
+We will further arrange it here
+
+```{r}
+emerging <- ehsa %>% 
+  arrange(sl, abs(tau)) %>% 
+  slice(1:5)
+```
+
+We will be using emerging_hotspot_analysis(), where x takes in a space-time object, .var takes in the variable of vaccination_rate, and k refers to the number of time lags. We will be using set.seed() again to ensure the same output.
+
+```{r}
+set.seed(1234)
+ehsa <- emerging_hotspot_analysis(
+  x = vacc_rate_st,
+  .var = "vaccination_rate",
+  k = 1,
+  nsim = 99
+)
+```
+
+## 4.6 Visualising the distribution of EHSA
+
+```{r}
+ggplot(data = ehsa,
+       aes(x = classification)) +
+  geom_bar()
+```
+
+## 4.7 Visualising EHSA using tmap
+
+We will be using left_join() by village_code and location to join ESHA with classification
+
+```{r}
+vacc_ehsa <- left_join(geoJKT, ehsa, by = c("village_code" = "location"))
+```
+
+```{r}
+ehsa_sig <- vacc_ehsa  %>%
+  filter(p_value < 0.05)
+tmap_mode("view")
+tm_shape(vacc_ehsa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(ehsa_sig) +
+  tm_fill("classification") + 
+  tm_borders(alpha = 0.4) +
+  tm_view(set.zoom.limits =c(10, 16))
+```
+
+## 4.8 Statistical conclusion
+
+From this [link](https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/learnmoreemerging.htm#:~:text=Oscillating%20Cold%20Spot,been%20statistically%20significant%20cold%20spots), we are able to derive some useful insights from the table.
+
+| Pattern name         | Definition                                                                                                                                                                                                                                                                                                                 |
+|-------------|-----------------------------------------------------------|
+| Sporadic cold spot   | A statistically significant cold spot for the final time-step interval with a history of also being an on-again and off-again cold spot. Less than 90 percent of the time-step intervals have been statistically significant cold spots and none of the time-step intervals have been statistically significant hot spots. |
+| Oscillating coldspot | A statistically significant cold spot for the final time-step interval that has a history of also being a statistically significant hot spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant cold spots.                                                     |
+| Oscillating hotspot  | A statistically significant hot spot for the final time-step interval that has a history of also being a statistically significant cold spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant hot spots.                                                      |
+
+By understanding this table, This could imply that the presence of some areas in which vaccination rate often switch between insignificant levels of clustering and significant levels of clustering of low vaccination rates is present.
+
+Additionally, with the vaccination programme by the government, we can also imply that more states are moving from the clustering of low to high vaccination rates, as the presence of oscillating hot spot implies that the initial cold spots became hot spots.
