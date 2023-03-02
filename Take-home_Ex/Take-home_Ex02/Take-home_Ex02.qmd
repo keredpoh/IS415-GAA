@@ -14,7 +14,9 @@ editor: visual
 
 We will be exploring vaccination rates in DKI Jarkarta, while identifying sub-districts with how the vaccination rate changes over time.
 
-We will be mainly using Choropleth Mapping and Analysis, Local Gi analysis, and Emerging Hot Spot Analysis (EHSA) with the aim of discovering Spatio-Temporal trends.
+We will be mainly using Choropleth Mapping and Analysis, Local Gi analysis, and Emerging Hot Spot Analysis (EHSA) with the aim of discovering Spatio-Temporal trends. 
+
+This is useful as we are able to then use the trends to help predict the geographic expansion of vaccination rates, and the data can be utilised by the government to bring about positive change in society.
 
 # 1 Loading of Data
 
@@ -50,7 +52,19 @@ We should never assume that the data set provided has no missing values. We chec
   length()
 ```
 
-### 1.2.2 Trimming Outer Island
+### 1.2.2 Filling up NA values
+
+From looking at View(geoJKT), we see that the 14 NA values are associated with rows 243 and 244. Let us insert the necessary values.
+
+```{r}
+geoJKT$KAB_KOTA[243]<-"JAKARTA UTARA"
+geoJKT$KAB_KOTA[244]<-"JAKARTA UTARA"
+
+geoJKT$KODE_DESA[243]<-"3188888801"
+geoJKT$KODE_DESA[244]<-"3188888802"
+```
+
+### 1.2.3 Trimming Outer Island
 
 Let us visualise the original polygon. Notice that there are several island that we do not want, as we are only focusing on the main sub-districts of Jakarta, or mainland for short.
 
@@ -67,18 +81,6 @@ From there, we can further derive that KEPULAUAN SERIBU means outer island, whic
 ```{r}
 geoJKT <- filter(geoJKT, KAB_KOTA != "KEPULAUAN SERIBU") 
 geoJKT
-```
-
-### 1.2.3 Filling up NA values
-
-From looking at View(geoJKT), we see that the 14 NA values are associated with rows 243 and 244. Let us insert the necessary values.
-
-```{r}
-geoJKT$KAB_KOTA[243]<-"JAKARTA UTARA"
-geoJKT$KAB_KOTA[244]<-"JAKARTA UTARA"
-
-geoJKT$KODE_DESA[243]<-"3188888801"
-geoJKT$KODE_DESA[244]<-"3188888802"
 ```
 
 ### 1.2.4 Visualising of Map
