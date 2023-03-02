@@ -14,7 +14,7 @@ editor: visual
 
 We will be exploring vaccination rates in DKI Jarkarta, while identifying sub-districts with how the vaccination rate changes over time.
 
-We will be mainly using Choropleth Mapping and Analysis, Local Gi analysis, and Emerging Hot Spot Analysis (EHSA) with the aim of discovering Spatio-Temporal trends. 
+We will be mainly using Choropleth Mapping and Analysis, Local Gi analysis, and Emerging Hot Spot Analysis (EHSA) with the aim of discovering Spatio-Temporal trends.
 
 This is useful as we are able to then use the trends to help predict the geographic expansion of vaccination rates, and the data can be utilised by the government to bring about positive change in society.
 
@@ -311,14 +311,15 @@ Overall, The choropleth map shows that vaccination rates in Jakarta have been in
 
 From the span of 12 months (July 2021 to June 2022), we can see that the lower bound is 0.227 to 0.781, further proving the accuracy of the pattern.
 
-# 3 Local Gi Analysis 
+# 3 Local Gi Analysis
+
 In this section, we will be creating spatial contiguity weights and neighbour list, with gstar output.
 
 ## 3.1 Function to generate gstar values
 
 We will need a function to generate from all 12 months.
 
-## 3.1.1 Computing Contiguity Spatial Weights
+### 3.1.1 Computing Contiguity Spatial Weights
 
 ```{r}
 month <- vaccinationJKT %>%
@@ -333,7 +334,7 @@ wm_q <- month %>%
 wm_q
 ```
 
-## 3.1.2 Computing local GI
+### 3.1.2 Computing local GI
 
 We will be using set.seed() to ensure that the output will be the same
 
@@ -344,7 +345,7 @@ july_LGI <- wm_q %>%
   unnest(local_Gi)
 ```
 
-## 3.1.3 Visualizing p-value of local Gi
+### 3.1.3 Visualizing p-value of local Gi
 
 ```{r}
 tmap_mode("plot")
@@ -357,7 +358,7 @@ tm_shape(july_LGI) +
               main.title.size = 0.8)
 ```
 
-## 3.1.4 local GI computation function
+### 3.1.4 local GI computation function
 
 Again, we add set.seed() to ensure that the output will always be the same
 
@@ -392,7 +393,7 @@ for (i in 1:12){
 }
 ```
 
-## 3.1.5 Tmap Function
+### 3.1.5 Tmap Function
 
 ```{r}
 gi_graph <- function(x){
@@ -413,6 +414,7 @@ gi_graph <- function(x){
 ```
 
 We will now plot it according to chronological order.
+
 ```{r}
 tmap_mode("plot")
 tmap_arrange(gi_graph(month_GI[[1]]),
@@ -438,7 +440,7 @@ tmap_arrange(gi_graph(month_GI[[9]]),
              ncol = 2)
 ```
 
-## 3.1.6 Statistical conclusions (not more than 250 words)
+## 3.2 Statistical conclusions (not more than 250 words)
 
 We understand that a Gi value that has a significant and positive z-score is a hot spot, representing clustering of high values, and the opposite for cold spots as it has a significant negative z-score which represent clustering of low values.
 
@@ -488,9 +490,15 @@ gi_s <- vacc_rate_nb %>%
 
 ## 4.4 Mann-Kendall Test
 
-We will now select 3 sub districts and describe the trends using the Mann-Kendall test 1) 3175061001 2) 3173011006 3) 3174071005
+We will now select 3 sub districts and describe the trends using the Mann-Kendall test
 
-### 4.4.1 First district
+1\) 3175061001
+
+2\) 3173011006
+
+3\) 3174071005
+
+### 4.4.1 First district (3175061001)
 
 ```{r}
 dis_1 <- gi_s %>%
@@ -524,9 +532,9 @@ glimpse(stat1)
 
 Conclusion for sub district 3175061001
 
-We see a positive tau value and an signifiant sl value as it is < 0.05. This means that there is a slight positive association in gi* values and date and it is statistically significant. It also implies that the vaccination rate has been increasing, and also greater clustering (hot spot).
+We see a positive tau value and an signifiant sl value as it is \< 0.05. This means that there is a slight positive association in gi\* values and date and it is statistically significant. It also implies that the vaccination rate has been increasing, and also greater clustering (hot spot).
 
-### 4.4.2 Second district
+### 4.4.2 Second district (3173011006)
 
 We will be repeating the steps above for the second district as well.
 
@@ -554,9 +562,9 @@ stat2 <- dis_2 %>%
 glimpse(stat2)
 ```
 
-Conclusion for sub district 3173011006 We see a slight negative tau value and an significant sl value as it is < 0.05. This means that there is a slight negative association in gi* values and date and it is statistically significant. This means that the vaccination rate in this sub district is decreasing (cold spot), and it is statistically significant.
+Conclusion for sub district 3173011006 We see a slight negative tau value and an significant sl value as it is \< 0.05. This means that there is a slight negative association in gi\* values and date and it is statistically significant. This means that the vaccination rate in this sub district is decreasing (cold spot), and it is statistically significant.
 
-### 4.4.3 Third district
+### 4.4.3 Third district (3174071005)
 
 ```{r}
 dis_3 <- gi_s %>%
@@ -582,7 +590,7 @@ stat3 <- dis_3 %>%
 glimpse(stat3)
 ```
 
-Conclusion for sub district 3174071005 We see a negative tau value and an significant sl value as it is < 0.05. This means that there is a negative association in gi* values and date and it is statistically significant. This also means that the vaccination rate in this sub district is decreasing (cold spot).
+Conclusion for sub district 3174071005 We see a negative tau value and an significant sl value as it is \< 0.05. This means that there is a negative association in gi\* values and date and it is statistically significant. This also means that the vaccination rate in this sub district is decreasing (cold spot).
 
 ## 4.5 Emerging Hotspot Analysis
 
@@ -652,7 +660,7 @@ tm_shape(ehsa_sig) +
 From this [link](https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/learnmoreemerging.htm#:~:text=Oscillating%20Cold%20Spot,been%20statistically%20significant%20cold%20spots), we are able to derive some useful insights from the table.
 
 | Pattern name         | Definition                                                                                                                                                                                                                                                                                                                 |
-|-------------|-----------------------------------------------------------|
+|----------------|--------------------------------------------------------|
 | Sporadic cold spot   | A statistically significant cold spot for the final time-step interval with a history of also being an on-again and off-again cold spot. Less than 90 percent of the time-step intervals have been statistically significant cold spots and none of the time-step intervals have been statistically significant hot spots. |
 | Oscillating coldspot | A statistically significant cold spot for the final time-step interval that has a history of also being a statistically significant hot spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant cold spots.                                                     |
 | Oscillating hotspot  | A statistically significant hot spot for the final time-step interval that has a history of also being a statistically significant cold spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant hot spots.                                                      |

@@ -277,13 +277,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   </ul></li>
   <li><a href="#local-gi-analysis" id="toc-local-gi-analysis" class="nav-link" data-scroll-target="#local-gi-analysis">3 Local Gi Analysis</a>
   <ul class="collapse">
-  <li><a href="#function-to-generate-gstar-values" id="toc-function-to-generate-gstar-values" class="nav-link" data-scroll-target="#function-to-generate-gstar-values">3.1 Function to generate gstar values</a></li>
+  <li><a href="#function-to-generate-gstar-values" id="toc-function-to-generate-gstar-values" class="nav-link" data-scroll-target="#function-to-generate-gstar-values">3.1 Function to generate gstar values</a>
+  <ul class="collapse">
   <li><a href="#computing-contiguity-spatial-weights" id="toc-computing-contiguity-spatial-weights" class="nav-link" data-scroll-target="#computing-contiguity-spatial-weights">3.1.1 Computing Contiguity Spatial Weights</a></li>
   <li><a href="#computing-local-gi" id="toc-computing-local-gi" class="nav-link" data-scroll-target="#computing-local-gi">3.1.2 Computing local GI</a></li>
   <li><a href="#visualizing-p-value-of-local-gi" id="toc-visualizing-p-value-of-local-gi" class="nav-link" data-scroll-target="#visualizing-p-value-of-local-gi">3.1.3 Visualizing p-value of local Gi</a></li>
   <li><a href="#local-gi-computation-function" id="toc-local-gi-computation-function" class="nav-link" data-scroll-target="#local-gi-computation-function">3.1.4 local GI computation function</a></li>
   <li><a href="#tmap-function" id="toc-tmap-function" class="nav-link" data-scroll-target="#tmap-function">3.1.5 Tmap Function</a></li>
-  <li><a href="#statistical-conclusions-not-more-than-250-words" id="toc-statistical-conclusions-not-more-than-250-words" class="nav-link" data-scroll-target="#statistical-conclusions-not-more-than-250-words">3.1.6 Statistical conclusions (not more than 250 words)</a></li>
+  </ul></li>
+  <li><a href="#statistical-conclusions-not-more-than-250-words" id="toc-statistical-conclusions-not-more-than-250-words" class="nav-link" data-scroll-target="#statistical-conclusions-not-more-than-250-words">3.2 Statistical conclusions (not more than 250 words)</a></li>
   </ul></li>
   <li><a href="#emerging-hot-spot-analysis-ehsa" id="toc-emerging-hot-spot-analysis-ehsa" class="nav-link" data-scroll-target="#emerging-hot-spot-analysis-ehsa">4 Emerging Hot Spot Analysis (EHSA)</a>
   <ul class="collapse">
@@ -292,9 +294,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#computing-the-gi" id="toc-computing-the-gi" class="nav-link" data-scroll-target="#computing-the-gi">4.3 Computing the GI</a></li>
   <li><a href="#mann-kendall-test" id="toc-mann-kendall-test" class="nav-link" data-scroll-target="#mann-kendall-test">4.4 Mann-Kendall Test</a>
   <ul class="collapse">
-  <li><a href="#first-district" id="toc-first-district" class="nav-link" data-scroll-target="#first-district">4.4.1 First district</a></li>
-  <li><a href="#second-district" id="toc-second-district" class="nav-link" data-scroll-target="#second-district">4.4.2 Second district</a></li>
-  <li><a href="#third-district" id="toc-third-district" class="nav-link" data-scroll-target="#third-district">4.4.3 Third district</a></li>
+  <li><a href="#first-district-3175061001" id="toc-first-district-3175061001" class="nav-link" data-scroll-target="#first-district-3175061001">4.4.1 First district (3175061001)</a></li>
+  <li><a href="#second-district-3173011006" id="toc-second-district-3173011006" class="nav-link" data-scroll-target="#second-district-3173011006">4.4.2 Second district (3173011006)</a></li>
+  <li><a href="#third-district-3174071005" id="toc-third-district-3174071005" class="nav-link" data-scroll-target="#third-district-3174071005">4.4.3 Third district (3174071005)</a></li>
   </ul></li>
   <li><a href="#emerging-hotspot-analysis" id="toc-emerging-hotspot-analysis" class="nav-link" data-scroll-target="#emerging-hotspot-analysis">4.5 Emerging Hotspot Analysis</a></li>
   <li><a href="#visualising-the-distribution-of-ehsa" id="toc-visualising-the-distribution-of-ehsa" class="nav-link" data-scroll-target="#visualising-the-distribution-of-ehsa">4.6 Visualising the distribution of EHSA</a></li>
@@ -943,9 +945,8 @@ Projected CRS: DGN95 / UTM zone 48S
 <section id="function-to-generate-gstar-values" class="level2">
 <h2 class="anchored" data-anchor-id="function-to-generate-gstar-values">3.1 Function to generate gstar values</h2>
 <p>We will need a function to generate from all 12 months.</p>
-</section>
-<section id="computing-contiguity-spatial-weights" class="level2">
-<h2 class="anchored" data-anchor-id="computing-contiguity-spatial-weights">3.1.1 Computing Contiguity Spatial Weights</h2>
+<section id="computing-contiguity-spatial-weights" class="level3">
+<h3 class="anchored" data-anchor-id="computing-contiguity-spatial-weights">3.1.1 Computing Contiguity Spatial Weights</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>month <span class="ot">&lt;-</span> vaccinationJKT <span class="sc">%&gt;%</span></span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(date <span class="sc">==</span> <span class="st">"2021-07-01"</span>)</span>
@@ -982,8 +983,8 @@ Projected CRS: DGN95 / UTM zone 48S
 </div>
 </div>
 </section>
-<section id="computing-local-gi" class="level2">
-<h2 class="anchored" data-anchor-id="computing-local-gi">3.1.2 Computing local GI</h2>
+<section id="computing-local-gi" class="level3">
+<h3 class="anchored" data-anchor-id="computing-local-gi">3.1.2 Computing local GI</h3>
 <p>We will be using set.seed() to ensure that the output will be the same</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
@@ -992,8 +993,8 @@ Projected CRS: DGN95 / UTM zone 48S
 <span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(local_Gi)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="visualizing-p-value-of-local-gi" class="level2">
-<h2 class="anchored" data-anchor-id="visualizing-p-value-of-local-gi">3.1.3 Visualizing p-value of local Gi</h2>
+<section id="visualizing-p-value-of-local-gi" class="level3">
+<h3 class="anchored" data-anchor-id="visualizing-p-value-of-local-gi">3.1.3 Visualizing p-value of local Gi</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">"plot"</span>)</span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(july_LGI) <span class="sc">+</span></span>
@@ -1008,8 +1009,8 @@ Projected CRS: DGN95 / UTM zone 48S
 </div>
 </div>
 </section>
-<section id="local-gi-computation-function" class="level2">
-<h2 class="anchored" data-anchor-id="local-gi-computation-function">3.1.4 local GI computation function</h2>
+<section id="local-gi-computation-function" class="level3">
+<h3 class="anchored" data-anchor-id="local-gi-computation-function">3.1.4 local GI computation function</h3>
 <p>Again, we add set.seed() to ensure that the output will always be the same</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>local_gi <span class="ot">&lt;-</span> <span class="cf">function</span>(x){</span>
@@ -1041,8 +1042,8 @@ Projected CRS: DGN95 / UTM zone 48S
 <span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="tmap-function" class="level2">
-<h2 class="anchored" data-anchor-id="tmap-function">3.1.5 Tmap Function</h2>
+<section id="tmap-function" class="level3">
+<h3 class="anchored" data-anchor-id="tmap-function">3.1.5 Tmap Function</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>gi_graph <span class="ot">&lt;-</span> <span class="cf">function</span>(x){</span>
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  HCSA_sig <span class="ot">&lt;-</span> x <span class="sc">%&gt;%</span></span>
@@ -1093,8 +1094,9 @@ Projected CRS: DGN95 / UTM zone 48S
 </div>
 </div>
 </section>
+</section>
 <section id="statistical-conclusions-not-more-than-250-words" class="level2">
-<h2 class="anchored" data-anchor-id="statistical-conclusions-not-more-than-250-words">3.1.6 Statistical conclusions (not more than 250 words)</h2>
+<h2 class="anchored" data-anchor-id="statistical-conclusions-not-more-than-250-words">3.2 Statistical conclusions (not more than 250 words)</h2>
 <p>We understand that a Gi value that has a significant and positive z-score is a hot spot, representing clustering of high values, and the opposite for cold spots as it has a significant negative z-score which represent clustering of low values.</p>
 <p>The cold areas at the center have persisted for quite a while, which may suggest that the sub district wide lack of vaccination knowledge or a shortage of medical resources. Should the Indonesian government choose to focus on where to increase vaccination rate, they can opt to invest more time into the targeted area of concern, with the help of this Gi map. However, overall vaccination rates have risen.</p>
 </section>
@@ -1141,9 +1143,12 @@ Projected CRS: DGN95 / UTM zone 48S
 </section>
 <section id="mann-kendall-test" class="level2">
 <h2 class="anchored" data-anchor-id="mann-kendall-test">4.4 Mann-Kendall Test</h2>
-<p>We will now select 3 sub districts and describe the trends using the Mann-Kendall test 1) 3175061001 2) 3173011006 3) 3174071005</p>
-<section id="first-district" class="level3">
-<h3 class="anchored" data-anchor-id="first-district">4.4.1 First district</h3>
+<p>We will now select 3 sub districts and describe the trends using the Mann-Kendall test</p>
+<p>1) 3175061001</p>
+<p>2) 3173011006</p>
+<p>3) 3174071005</p>
+<section id="first-district-3175061001" class="level3">
+<h3 class="anchored" data-anchor-id="first-district-3175061001">4.4.1 First district (3175061001)</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>dis_1 <span class="ot">&lt;-</span> gi_s <span class="sc">%&gt;%</span></span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
@@ -1183,8 +1188,8 @@ $ varS &lt;dbl&gt; 212.6667</code></pre>
 <p>Conclusion for sub district 3175061001</p>
 <p>We see a positive tau value and an signifiant sl value as it is &lt; 0.05. This means that there is a slight positive association in gi* values and date and it is statistically significant. It also implies that the vaccination rate has been increasing, and also greater clustering (hot spot).</p>
 </section>
-<section id="second-district" class="level3">
-<h3 class="anchored" data-anchor-id="second-district">4.4.2 Second district</h3>
+<section id="second-district-3173011006" class="level3">
+<h3 class="anchored" data-anchor-id="second-district-3173011006">4.4.2 Second district (3173011006)</h3>
 <p>We will be repeating the steps above for the second district as well.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>dis_2 <span class="ot">&lt;-</span> gi_s <span class="sc">%&gt;%</span></span>
@@ -1221,8 +1226,8 @@ $ varS &lt;dbl&gt; 212.6667</code></pre>
 </div>
 <p>Conclusion for sub district 3173011006 We see a slight negative tau value and an significant sl value as it is &lt; 0.05. This means that there is a slight negative association in gi* values and date and it is statistically significant. This means that the vaccination rate in this sub district is decreasing (cold spot), and it is statistically significant.</p>
 </section>
-<section id="third-district" class="level3">
-<h3 class="anchored" data-anchor-id="third-district">4.4.3 Third district</h3>
+<section id="third-district-3174071005" class="level3">
+<h3 class="anchored" data-anchor-id="third-district-3174071005">4.4.3 Third district (3174071005)</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>dis_3 <span class="ot">&lt;-</span> gi_s <span class="sc">%&gt;%</span></span>
 <span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
@@ -1328,8 +1333,8 @@ $ varS &lt;dbl&gt; 212.6667</code></pre>
 <p>From this <a href="https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/learnmoreemerging.htm#:~:text=Oscillating%20Cold%20Spot,been%20statistically%20significant%20cold%20spots">link</a>, we are able to derive some useful insights from the table.</p>
 <table class="table">
 <colgroup>
-<col style="width: 18%">
-<col style="width: 81%">
+<col style="width: 22%">
+<col style="width: 77%">
 </colgroup>
 <thead>
 <tr class="header">
