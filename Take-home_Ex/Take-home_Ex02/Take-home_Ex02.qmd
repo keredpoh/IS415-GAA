@@ -31,7 +31,7 @@ pacman::p_load(sf, funModeling,maptools,raster, spatstat, tmap , tidyverse, sfde
 We will be using 2 primary sets of data.
 
 | Data set   | Source                                                                                                                             | Description                                                                           |
-|-------------------|---------------------------|---------------------------|
+|--------------|------------------------------------|-----------------------|
 | Geospatial | [INDONESIA GEOSPASIAL](https://www.indonesia-geospasial.com/2020/04/download-shapefile-shp-batas-desa.html "INDONESIA GEOSPASIAL") | Sub-district of Indonesia                                                             |
 | Aspatial   | [Riwayat File Vaksinasi DKI Jakarta](https://riwayat-file-vaksinasi-dki-jakarta-jakartagis.hub.arcgis.com/)                        | Monthly numbers of vaccinated people from July 2021 to June 2022 (sub-district level) |
 
@@ -660,7 +660,7 @@ tm_shape(ehsa_sig) +
 From this [link](https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/learnmoreemerging.htm#:~:text=Oscillating%20Cold%20Spot,been%20statistically%20significant%20cold%20spots), we are able to derive some useful insights from the table.
 
 | Pattern name         | Definition                                                                                                                                                                                                                                                                                                                 |
-|----------------|--------------------------------------------------------|
+|------------|------------------------------------------------------------|
 | Sporadic cold spot   | A statistically significant cold spot for the final time-step interval with a history of also being an on-again and off-again cold spot. Less than 90 percent of the time-step intervals have been statistically significant cold spots and none of the time-step intervals have been statistically significant hot spots. |
 | Oscillating coldspot | A statistically significant cold spot for the final time-step interval that has a history of also being a statistically significant hot spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant cold spots.                                                     |
 | Oscillating hotspot  | A statistically significant hot spot for the final time-step interval that has a history of also being a statistically significant cold spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant hot spots.                                                      |
