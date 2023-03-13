@@ -1,0 +1,25 @@
+---
+title: "Take-home Exercise 3: Predicting HDB Public Housing Resale Pricies using Geographically Weighted Methods"
+date: "9 March 2023"
+date-modified: "`r Sys.Date()`"
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+#Setting the scene
+Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation's economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.
+
+Geographical Weighted Models were introduced for calibrating predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
+
+
+Loading the data
+```{r}
+pacman::p_load('sf', 'tidyverse', 'tmap', 'spdep', 'onemapsgapi', 'units', 'matrixStats', 'readxl', 'jsonlite', 'olsrr', 'corrplot', 'ggpubr', 'GWmodel',
+'devtools', 'kableExtra', 'plotly', 'ggthemes')
+```
+
+
