@@ -1,3 +1,141 @@
 ---
 title: "In Class Exercise 9"
+date: '13 March 2023'
+date-modified: '`r Sys.Date()`'
+execute: 
+  eval: true
+  echo: true
+  warning: false
+editor: visual
 ---
+
+Loading the data!
+
+```{r}
+pacman::p_load(sf, GWmodel, SpatialML, tidyverse, tmap, ggpubr, olsrr, devtools, tidymodels, rsample)
+```
+
+Preparing data
+
+```{r}
+mdata <- read_rds("data/aspatial/mdata.rds")
+```
+
+```{r}
+set.seed(1234)
+resale_split <- initial_split(mdata, prop = 6.5/10)
+
+train_data <- training(resale_split)
+test_data <- training(resale_split)
+```
+
+```{r}
+write_rds(train_data, "data/aspatial/train_data.rds")
+write_rds(test_data, "data/aspatial/test_data.rds")
+```
+
+```{r}
+
+#predictive model uses train data
+#predictive modelling not particular about f test, that is for exploring
+#residual standard error is more useful 
+
+price_mlr <- lm(resale_price ~ floor_area_sqm + storey_order + remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER + PROX_MRT + PROX_PARK + PROX_MALL + PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN + WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + WITHIN_1KM_PRISCH, data = train_data)
+
+summary(price_mlr)
+```
+
+```{r}
+#important
+
+train_data_sp <- as_Spatial(train_data)
+train_data_sp
+```
+
+```{r}
+#| eval: false
+#preparing coordinate data *important if not algo wont work
+#sf data frame is a list object, one is a attribute table, one is geo table
+#ranger dont understand sf format because we just did sampling so it is sf for now
+#can use _st_drop_geometry, but it's not good because we must keep it
+#hence, we must use the things below to extract the coordinates out
+
+coords <- st_coordinates(mdata)
+coords_train <- st_coordinates(train_data)
+coords_test <- st_coordinates(test_data)
+```
+
+```{r}
+#drop before using ranger
+
+train_data <- train_data %>%
+  st_drop_geometry()
+```
+
+```{r}
+set.seed(1234)
+rf <- ranger(resale_price ~ floor_area_sqm + storey_order + remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER + PROX_MRT + PROX_PARK + PROX_MALL + PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN + WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + WITHIN_1KM_PRISCH, data = train_data)
+
+rf
+
+#MSE means means square error. Not the same as residual square error. RSE is the square root of MSE. Look at MSE to compare 
+```
+
+```{r}
+#| eval: false
+set.seed(1234)
+
+gwRF_adaptive <- grf(formula = resale_price ~ floor_area_sqm + storey_order + remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER + PROX_MRT + PROX_PARK + PROX_MALL + PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN + WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + WITHIN_1KM_PRISCH, 
+                     dframe = train_data,
+                     bw = 55,
+                     kernel = "adaptive",
+                     coords = coords_train)
+#use AIC predicted. AIC will be close to AICc if there are no bias
+# gwRF_adaptive$Global.Model$variable.importance
+```
+
+```{r}
+#| eval: false
+test_data <- cbind(test_data, coords_test) %>%
+  st_drop_geometry()
+```
+
+```{r}
+#| eval: false
+gwRF_pred <- predict.grf(gwRF_adaptive, test_data, x.var.name = "X", y.var.name = "Y", local.w = 1, global.w = 0)
+```
+
+```{r}
+#| eval: false
+gwRF_pred_df <- as.data.frame(gwRF_pred)
+```
+
+```{r}
+#| eval: false
+gwRF_test_predict <- cbind(test_data, predict_grf_df)
+```
+
+```{r}
+#| eval: false
+write_rds(test_predict, "data/model/test_predict.rds")
+```
+
+```{r}
+#| eval: false
+ggplot(data = test_predict,
+       aes(x = predict_grf,
+           y = resale_price)) +
+  geom_point()
+```
+
+```{r}
+#| eval: false
+sqrt(mean((test_predict$resale_price - test_predict$predict_grf)^2))
+```
+
+
+
+
+
+
+

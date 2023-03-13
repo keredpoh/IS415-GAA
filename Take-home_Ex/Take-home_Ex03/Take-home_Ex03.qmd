@@ -13,7 +13,7 @@ editor: visual
 #Setting the scene
 Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation's economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.
 
-Geographical Weighted Models were introduced for calibrating predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
+Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
 
 
 Loading the data
