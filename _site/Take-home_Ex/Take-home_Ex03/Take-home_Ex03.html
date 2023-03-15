@@ -123,6 +123,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   }
 }</script>
 
+<script src="../../site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="../../site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
 
 <link rel="stylesheet" href="../../styles.css">
 </head>
@@ -278,7 +281,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">March 13, 2023</p>
+      <p class="date-modified">March 15, 2023</p>
     </div>
   </div>
     
@@ -287,12 +290,216 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>#Setting the scene Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation’s economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.</p>
+<p>#Setting the scene</p>
+<p>Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation’s economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.</p>
 <p>Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.</p>
 <p>Loading the data</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">'sf'</span>, <span class="st">'tidyverse'</span>, <span class="st">'tmap'</span>, <span class="st">'spdep'</span>, <span class="st">'onemapsgapi'</span>, <span class="st">'units'</span>, <span class="st">'matrixStats'</span>, <span class="st">'readxl'</span>, <span class="st">'jsonlite'</span>, <span class="st">'olsrr'</span>, <span class="st">'corrplot'</span>, <span class="st">'ggpubr'</span>, <span class="st">'GWmodel'</span>,</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="st">'devtools'</span>, <span class="st">'kableExtra'</span>, <span class="st">'plotly'</span>, <span class="st">'ggthemes'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Dataset used</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># initialise a dataframe of our aspatial and geospatial dataset details</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>datasets <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Type=</span><span class="fu">c</span>(<span class="st">"Aspatial"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Extracted"</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Selfsourced"</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Selfsourced"</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Selfsourced"</span>,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Geospatial - Selfsourced"</span>),</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">Name=</span><span class="fu">c</span>(<span class="st">"Resale Flat Prices"</span>,</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Singapore National Boundary"</span>,</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Master Plan 2014 Subzone Boundary (Web)"</span>,</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>         <span class="st">"MRT &amp; LRT Locations Aug 2021"</span>,</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Bus Stop Locations Aug 2021"</span>,</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Childcare Services"</span>,</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Eldercare Services"</span>,</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Hawker Centres"</span>,</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Kindergartens"</span>,</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Parks"</span>,</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Supermarkets"</span>,</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Primary Schools"</span>,</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Community Health Assistance Scheme (CHAS) Clinics"</span>,</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Integrated Screening Programme (ISP) Clinics"</span>,</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Public, Private and Non-for-profit Hospitals"</span>,</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>         <span class="st">"Shopping Mall SVY21 Coordinates`"</span>),</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>  <span class="at">Format=</span><span class="fu">c</span>(<span class="st">".csv"</span>, </span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>,</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>           </span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>,</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>, </span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>,</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>,</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>           </span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>           <span class="st">".kml"</span>,</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>           <span class="st">".shp"</span>,</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>           <span class="st">".xlsx"</span>,</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>           <span class="st">".csv"</span>),</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>  <span class="at">Source=</span><span class="fu">c</span>(<span class="st">"[data.gov.sg](https://data.gov.sg/dataset/resale-flat-prices)"</span>,</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[data.gov.sg](https://data.gov.sg/dataset/national-map-polygon)"</span>,</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[data.gov.sg](https://data.gov.sg/dataset/master-plan-2014-subzone-boundary-web)"</span>,</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=Train)"</span>,</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=bus%20stop)"</span>,</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>           </span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>           </span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[data.gov.sg](https://data.gov.sg/dataset/chas-clinics)"</span>,</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[OneMap API](https://www.onemap.gov.sg/docs/)"</span>,</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>           <span class="st">"Self-sourced and collated (section 2.3)"</span>,</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>           <span class="st">"[Mall SVY21 Coordinates Web Scaper](https://github.com/ValaryLim/Mall-Coordinates-Web-Scraper)"</span>)</span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a><span class="co"># with reference to this guide on kableExtra:</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a><span class="co"># https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html</span></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="co"># kable_material is the name of the kable theme</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="co"># 'hover' for to highlight row when hovering, 'scale_down' to adjust table to fit page width</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kableExtra)</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(datasets, <span class="at">caption=</span><span class="st">"Datasets Used"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_material</span>(<span class="st">"hover"</span>, <span class="at">latex_options=</span><span class="st">"scale_down"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table class=" lightable-material lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<caption>Datasets Used</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Type </th>
+   <th style="text-align:left;"> Name </th>
+   <th style="text-align:left;"> Format </th>
+   <th style="text-align:left;"> Source </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Aspatial </td>
+   <td style="text-align:left;"> Resale Flat Prices </td>
+   <td style="text-align:left;"> .csv </td>
+   <td style="text-align:left;"> [data.gov.sg](https://data.gov.sg/dataset/resale-flat-prices) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial </td>
+   <td style="text-align:left;"> Singapore National Boundary </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [data.gov.sg](https://data.gov.sg/dataset/national-map-polygon) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial </td>
+   <td style="text-align:left;"> Master Plan 2014 Subzone Boundary (Web) </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [data.gov.sg](https://data.gov.sg/dataset/master-plan-2014-subzone-boundary-web) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial </td>
+   <td style="text-align:left;"> MRT &amp; LRT Locations Aug 2021 </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=Train) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial </td>
+   <td style="text-align:left;"> Bus Stop Locations Aug 2021 </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=bus%20stop) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Childcare Services </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Eldercare Services </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Hawker Centres </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Kindergartens </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Parks </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Supermarkets </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Extracted </td>
+   <td style="text-align:left;"> Primary Schools </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Selfsourced </td>
+   <td style="text-align:left;"> Community Health Assistance Scheme (CHAS) Clinics </td>
+   <td style="text-align:left;"> .kml </td>
+   <td style="text-align:left;"> [data.gov.sg](https://data.gov.sg/dataset/chas-clinics) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Selfsourced </td>
+   <td style="text-align:left;"> Integrated Screening Programme (ISP) Clinics </td>
+   <td style="text-align:left;"> .shp </td>
+   <td style="text-align:left;"> [OneMap API](https://www.onemap.gov.sg/docs/) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Selfsourced </td>
+   <td style="text-align:left;"> Public, Private and Non-for-profit Hospitals </td>
+   <td style="text-align:left;"> .xlsx </td>
+   <td style="text-align:left;"> Self-sourced and collated (section 2.3) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Geospatial - Selfsourced </td>
+   <td style="text-align:left;"> Shopping Mall SVY21 Coordinates` </td>
+   <td style="text-align:left;"> .csv </td>
+   <td style="text-align:left;"> [Mall SVY21 Coordinates Web Scaper](https://github.com/ValaryLim/Mall-Coordinates-Web-Scraper) </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
 </div>
 
 

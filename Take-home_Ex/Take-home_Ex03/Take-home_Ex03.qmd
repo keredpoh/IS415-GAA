@@ -10,11 +10,11 @@ execute:
 editor: visual
 ---
 
-#Setting the scene
+#Setting the scene 
+
 Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation's economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.
 
 Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
-
 
 Loading the data
 ```{r}
@@ -22,4 +22,94 @@ pacman::p_load('sf', 'tidyverse', 'tmap', 'spdep', 'onemapsgapi', 'units', 'matr
 'devtools', 'kableExtra', 'plotly', 'ggthemes')
 ```
 
+Dataset used
+```{r}
+# initialise a dataframe of our aspatial and geospatial dataset details
+datasets <- data.frame(
+  Type=c("Aspatial",
+         "Geospatial",
+         "Geospatial",
+         "Geospatial",
+         "Geospatial",
+         
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         "Geospatial - Extracted",
+         
+         "Geospatial - Selfsourced",
+         "Geospatial - Selfsourced",
+         "Geospatial - Selfsourced",
+         "Geospatial - Selfsourced"),
+  
+  Name=c("Resale Flat Prices",
+         "Singapore National Boundary",
+         "Master Plan 2014 Subzone Boundary (Web)",
+         "MRT & LRT Locations Aug 2021",
+         "Bus Stop Locations Aug 2021",
+         
+         "Childcare Services",
+         "Eldercare Services",
+         "Hawker Centres",
+         "Kindergartens",
+         "Parks",
+         "Supermarkets",
+         "Primary Schools",
+         
+         "Community Health Assistance Scheme (CHAS) Clinics",
+         "Integrated Screening Programme (ISP) Clinics",
+         "Public, Private and Non-for-profit Hospitals",
+         "Shopping Mall SVY21 Coordinates`"),
+  
+  Format=c(".csv", 
+           ".shp", 
+           ".shp", 
+           ".shp", 
+           ".shp",
+           
+           ".shp", 
+           ".shp", 
+           ".shp", 
+           ".shp",
+           ".shp", 
+           ".shp",
+           ".shp",
+           
+           ".kml",
+           ".shp",
+           ".xlsx",
+           ".csv"),
+  
+  Source=c("[data.gov.sg](https://data.gov.sg/dataset/resale-flat-prices)",
+           "[data.gov.sg](https://data.gov.sg/dataset/national-map-polygon)",
+           "[data.gov.sg](https://data.gov.sg/dataset/master-plan-2014-subzone-boundary-web)",
+           "[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=Train)",
+           "[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=bus%20stop)",
+           
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           
+           "[data.gov.sg](https://data.gov.sg/dataset/chas-clinics)",
+           "[OneMap API](https://www.onemap.gov.sg/docs/)",
+           "Self-sourced and collated (section 2.3)",
+           "[Mall SVY21 Coordinates Web Scaper](https://github.com/ValaryLim/Mall-Coordinates-Web-Scraper)")
+  )
+
+# with reference to this guide on kableExtra:
+# https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+# kable_material is the name of the kable theme
+# 'hover' for to highlight row when hovering, 'scale_down' to adjust table to fit page width
+library(knitr)
+library(kableExtra)
+kable(datasets, caption="Datasets Used") %>%
+  kable_material("hover", latex_options="scale_down")
+```
 
