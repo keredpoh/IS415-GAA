@@ -10,19 +10,21 @@ execute:
 editor: visual
 ---
 
-#Setting the scene 
+# 1 Setting the scene
 
 Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation's economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.
 
 Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
 
-Loading the data
+## 1.1 Loading the data
+
 ```{r}
 pacman::p_load('sf', 'tidyverse', 'tmap', 'spdep', 'onemapsgapi', 'units', 'matrixStats', 'readxl', 'jsonlite', 'olsrr', 'corrplot', 'ggpubr', 'GWmodel',
 'devtools', 'kableExtra', 'plotly', 'ggthemes')
 ```
 
-Dataset used
+## 1.2 Data set used
+
 ```{r}
 # initialise a dataframe of our aspatial and geospatial dataset details
 datasets <- data.frame(
@@ -113,3 +115,118 @@ kable(datasets, caption="Datasets Used") %>%
   kable_material("hover", latex_options="scale_down")
 ```
 
+# 2 Data Preparation
+
+## 2.1 Aspatial data
+
+Loading Resale Data
+
+::: panel-tabset
+# Loading Data
+
+```{r}
+resale <- read_csv("data/aspatial/resale-flat-prices-based-on-registration-date-from-jan-2017-onwards.csv")
+```
+
+# Viewing Data
+
+```{r}
+glimpse(resale)
+```
+:::
+
+We will be looking at 4 room flats, within January of 2021 to Febuary of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
+
+```{r}
+resale_sub <-  filter(resale,flat_type == "4 ROOM") %>% 
+              filter(month >= "2021-01" & month <= "2023-02")
+```
+
+To double confirm that we extracted what we really want, we will be using unique() to view what we extracted. As seen below, we have extracted the correct range for the dates, and the flat_type of 4 Room.
+
+::: panel-tabset
+# Checking range for month
+
+```{r}
+unique(resale_sub$month)
+
+```
+
+# Checking flat type
+
+```{r}
+unique(resale_sub$flat_type)
+```
+
+# Viewing rs_sub
+
+```{r}
+glimpse(resale_sub)
+
+```
+:::
+
+### 2.1.2 Aspatial Wrangling
+
+As we can see from the resale_sub, the variable remaining lease and lease commence date essentially provides the same information. We will only be including remaining lease, as it directly tells us the remaining year.
+
+```{r}
+resale_sub <- resale %>%
+  select(- lease_commence_date)
+```
+
+Additionally, after looking at the resale_sub variables, we notice that remaining lease is \<chr\>. We would want it to be numeric, as it will be beneficial for us later on. We will have to first split the months and years in the variable remaining_lease.
+
+::: panel-tabset
+# Code Chunk
+
+```{r}
+resale_sub <- resale_sub %>%
+mutate(resale_sub, remaining_lease_yr = as.integer(str_sub(remaining_lease, 0, 2))) %>%
+  mutate(resale_sub, remaining_lease_mth = as.integer(str_sub(remaining_lease, 9, 11)))
+
+```
+
+# Glimpse
+
+```{r}
+glimpse(resale_sub)
+```
+:::
+
+From above, we notice that there are NA values for remaining lease month. We will replace it with 0 by identifying it with is.na()
+
+```{r}
+resale_sub$remaining_lease_mth[is.na(resale_sub$remaining_lease_mth)] <- 0
+```
+
+Our main goal here is to convert remaining lease months into years, and add them together under remaining_lease_year. we will first divide the remaining lease month variable by 12.
+
+```{r}
+resale_sub$remaining_lease_mth <- resale_sub$remaining_lease_mth/12
+```
+
+Then, we will combine them together under the new variable remaining lease year.
+
+```{r}
+resale_sub <- resale_sub %>%
+mutate(resale_sub, remaining_lease_year = rowSums(resale_sub[, c("remaining_lease_yr", "remaining_lease_mth")]))
+
+```
+
+Finally, we will select the rows we want using select(). Let us use glimpse to view the variables.
+
+::: panel-tabset
+# Code Chunk
+
+```{r}
+resale_sub <- resale_sub %>%
+  select(month, town, flat_type, block, street_name, storey_range, floor_area_sqm, remaining_lease_year)
+```
+
+# Glimpse
+
+```{r}
+glimpse(resale_sub)
+```
+:::
