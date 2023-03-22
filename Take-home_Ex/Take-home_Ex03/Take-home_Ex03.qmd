@@ -135,14 +135,14 @@ glimpse(resale)
 ```
 :::
 
-We will be looking at 4 room flats, within January of 2021 to Febuary of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
+We will be looking at 3 room flats, within January of 2021 to Febuary of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
 
 ```{r}
-resale_sub <-  filter(resale,flat_type == "4 ROOM") %>% 
+resale_sub <-  filter(resale,flat_type == "3 ROOM") %>% 
               filter(month >= "2021-01" & month <= "2023-02")
 ```
 
-To double confirm that we extracted what we really want, we will be using unique() to view what we extracted. As seen below, we have extracted the correct range for the dates, and the flat_type of 4 Room.
+To double confirm that we extracted what we really want, we will be using unique() to view what we extracted. As seen below, we have extracted the correct range for the dates, and the flat_type of 3 Room.
 
 ::: panel-tabset
 # Checking range for month
@@ -171,7 +171,7 @@ glimpse(resale_sub)
 As we can see from the resale_sub, the variable remaining lease and lease commence date essentially provides the same information. We will only be including remaining lease, as it directly tells us the remaining year.
 
 ```{r}
-resale_sub <- resale %>%
+resale_sub <- resale_sub %>%
   select(- lease_commence_date)
 ```
 
