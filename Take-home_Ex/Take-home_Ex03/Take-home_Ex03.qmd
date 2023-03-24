@@ -138,8 +138,9 @@ glimpse(resale)
 We will be looking at 3 room flats, within January of 2021 to Febuary of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
 
 ```{r}
-resale_sub <-  filter(resale,flat_type == "3 ROOM") %>% 
-              filter(month >= "2021-01" & month <= "2023-02")
+resale_sub <-  resale %>%
+  filter(flat_type == "3 ROOM",
+         month >= "2021-01" & month <= "2023-02")
 ```
 
 To double confirm that we extracted what we really want, we will be using unique() to view what we extracted. As seen below, we have extracted the correct range for the dates, and the flat_type of 3 Room.
@@ -182,8 +183,8 @@ Additionally, after looking at the resale_sub variables, we notice that remainin
 
 ```{r}
 resale_sub <- resale_sub %>%
-mutate(resale_sub, remaining_lease_yr = as.integer(str_sub(remaining_lease, 0, 2))) %>%
-  mutate(resale_sub, remaining_lease_mth = as.integer(str_sub(remaining_lease, 9, 11)))
+mutate(remaining_lease_yr = as.integer(str_sub(remaining_lease, 0, 2))) %>%
+  mutate(remaining_lease_mth = as.integer(str_sub(remaining_lease, 9, 11)))
 
 ```
 
@@ -228,5 +229,681 @@ resale_sub <- resale_sub %>%
 
 ```{r}
 glimpse(resale_sub)
+```
+:::
+
+By referencing to our favorite senior, [Megan](https://is415-msty.netlify.app/posts/2021-10-25-take-home-exercise-3/?panelset=self-sourced&panelset6=glimpse%28%29#data-wrangling-aspatial-data), she advised that we replace "SAINT" with "ST", as onemap spells it that way in the variable street_name, which will be a bit confusing. We can change that by using the code chunk below
+
+```{r}
+resale_sub$street_name <- gsub("ST\\.", "SAINT", resale_sub$street_name)
+```
+
+Similarly, by referencing Megan's work, we notice that there are no coordinates provided in the resale data. we will have to use a geocoding function as shown below.
+
+The steps are as follows:
+
+-   Combine the block and street name into an address
+
+-   Pass the address as the searchVal in our query
+
+-   Send the query to OneMapSG search *Note: Since we don't need all the address details, we can set `getAddrDetails` as 'N'*
+
+-   Convert response (JSON object) to text
+
+-   Saving the response in text form as a data frame
+
+-   retaining the latitude and longitude for our output
+
+```{r}
+library(httr)
+library(rjson)
+geocode <- function(block, streetname) {
+  base_url <- "https://developers.onemap.sg/commonapi/search"
+  address <- paste(block, streetname, sep = " ")
+  query <- list("searchVal" = address, 
+                "returnGeom" = "Y",
+                "getAddrDetails" = "N",
+                "pageNum" = "1")
+  
+  res <- GET(base_url, query = query)
+  restext<-content(res, as="text")
+  
+  output <- fromJSON(restext)  %>% 
+    as.data.frame %>%
+    select(results.LATITUDE, results.LONGITUDE)
+
+  return(output)
+}
+```
+
+After creating the function, we will have to make sure that the iterations are able to run through the whole resale data to ensure that every entry gets a coordinate. As such, we will be creating a loop
+
+```{r, eval = FALSE}
+resale_sub$LATITUDE <- 0
+resale_sub$LONGITUDE <- 0
+
+for (i in 1:nrow(resale_sub)){
+  temp_output <- geocode(resale_sub[i, 4], resale_sub[i, 5])
+  
+  resale_sub$LATITUDE[i] <- temp_output$results.LATITUDE
+  resale_sub$LONGITUDE[i] <- temp_output$results.LONGITUDE
+}
+```
+
+Let us save it into a RDS object
+
+```{r}
+saveRDS(resale_sub, file="resale_sub", compress=FALSE)
+```
+
+We will then assign the RDS object to resale_sub
+
+```{r}
+resale_sub <-readRDS("resale_sub")
+resale_sub
+```
+
+## 2.2 Geospatial data
+
+As mentioned above, we will be extracting geospatial data from Onemap. the codes used below will require the onemapsgapi package, which is already loaded in 1.1. I will break down the steps to extract data from Onemap as simple as possible!
+
+-   First, create an account for Onemap
+
+-   Fill up your details in this [link](https://developers.onemap.sg/confirm_account/) (with the details sent to your email)
+
+-   Ready to go after following the code chunks below!
+
+Do note that this is purely for reference, you will have to type in your own email and password to load your token!
+
+Type this command into the console, with your own email and password
+
+```{r, eval = FALSE}
+run_token <- get_token("email", "password")
+```
+
+Next, since I love food, I will be giving an example to extract hawker data from Onemap, using this code chunk.
+
+```{r, eval = FALSE}
+themes <- search_themes(run_token, "hawkercentre")
+```
+
+We will use the following function to extract data from Onemap. Lets assign it into hawker.
+
+```{r, eval = FALSE}
+hawkercentre <- get_theme(run_token, "hawkercentre")
+```
+
+And of course, our favorite part, ensuring that our spatial data have the correct ESPG CRS, which is 3414. We will also need to transform it into sf using st_as_sf(). Since we will be dealing with various extracted data, we do not want to keep extracting it each time we run or render the page. Hence, we will be using st_write() to write the sf object to file or database!
+
+```{r, eval = FALSE}
+hawkercentre_sf <- st_as_sf(hawkercentre, coords = c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = hawkercentre_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "hawkercentre",
+         driver = "ESRI Shapefile")
+```
+
+We can just repeat the steps above for the following variables. For the scope of this assignment, we will be extracting the following:
+
+-   childcare
+
+-   community clubs
+
+-   elder care
+
+-   kindergartens
+
+-   libraries
+
+-   parks
+
+I have already extracted the data beforehand, so let us proceed!
+
+(Note that we have already extracted hawker centers!)
+
+For reference, i will be putting the code below to extract the data from onemap
+
+::: panel-tabset
+# Childcare
+
+```{r, eval = FALSE}
+childcare <- get_theme(token,"childcare")
+childcare_sf <- st_as_sf(childcare, coords = c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = childcare_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "childcare",
+         driver = "ESRI Shapefile")
+```
+
+# Community clubs
+
+```{r, eval = FALSE}
+communityclubs<- get_theme(token,"communityclubs")
+communityclubs_sf <- st_as_sf(childcare, coords = c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = communityclubs_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "communityclubs",
+         driver = "ESRI Shapefile")
+
+```
+
+# Elder care
+
+```{r, eval = FALSE}
+
+eldercare <- get_theme(token,"eldercare")
+eldercare_sf <- st_as_sf(eldercare, coords=c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = eldercare_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "eldercare",
+         driver = "ESRI Shapefile")
+```
+
+# Kindergartens
+
+```{r, eval = FALSE}
+kindergartens <- get_theme(token,"kindergartens")
+kindergartens_sf <- st_as_sf(kindergartens, coords=c("Lng", "Lat"), crs= 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = kindergartens_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "kindergartens",
+         driver = "ESRI Shapefile")
+```
+
+# Libraries
+
+```{r, eval = FALSE}
+library <- get_theme(token,"libraries")
+library_sf <- st_as_sf(library, coords=c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = library_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "libraries",
+         driver = "ESRI Shapefile")
+```
+
+# Parks
+
+```{r, eval = FALSE}
+parks <- get_theme(token,"nationalparks")
+parks_sf <- st_as_sf(parks, coords=c("Lng", "Lat"), crs = 4326) %>%
+st_transform(crs = 3414)
+
+st_write(obj = parks_sf,
+         dsn = "data/geospatial/extracted",
+         layer = "parks",
+         driver = "ESRI Shapefile")
+```
+:::
+
+### 2.2.1 Reading Geospatial Data
+
+::: panel-tabset
+# Onemap (Extracted)
+
+```{r}
+hawkercentre_sf <- st_read(dsn = "data/geospatial/extracted", layer = "hawkercentre")
+```
+
+```{r}
+eldercare_sf <- st_read(dsn = "data/geospatial/extracted", layer = "eldercare")
+```
+
+```{r}
+childcare_sf <- st_read(dsn = "data/geospatial/extracted", layer = "childcare")
+```
+
+```{r}
+communityclubs_sf <- st_read(dsn = "data/geospatial/extracted", layer = "communityclubs")
+```
+
+```{r}
+kindergartens_sf <- st_read(dsn = "data/geospatial/extracted", layer = "kindergartens")
+```
+
+```{r}
+library_sf <- st_read(dsn = "data/geospatial/extracted", layer = "libraries")
+```
+
+```{r}
+parks_sf <- st_read(dsn = "data/geospatial/extracted", layer = "nationalparks")
+```
+
+# Basemap
+
+```{r}
+mpsz_sf <- st_read(dsn = "data/geospatial/map", layer = "MP14_SUBZONE_WEB_PL")
+```
+
+# Self-Sourced
+
+```{r}
+busstop_sf <- st_read(dsn = "data/geospatial/sourced", layer = "BusStop")
+```
+
+```{r}
+goodprisch_sf <- st_read(dsn = "data/geospatial/sourced", layer = "goodprimarysch")
+```
+
+```{r}
+mrt_sf <- st_read(dsn = "data/geospatial/sourced", layer = "mrt")
+```
+
+```{r}
+prisch_sf <- st_read(dsn = "data/geospatial/sourced", layer = "primarysch")
+```
+
+```{r}
+shoppingmall_sf <- st_read(dsn = "data/geospatial/sourced", layer = "shoppingmall")
+```
+
+```{r}
+supermarket_sf <- st_read(dsn = "data/geospatial/sourced", layer = "SUPERMARKETS")
+```
+:::
+
+### 2.2.2 Converting Self-sourced data
+
+As we all know, we have yet to change our out-sourced data to the correct crs, which is 3414. Let us change it below using st_transform()! Do note that we do not need to do this all the time, especially when the data is already in the correct CRS. But in this case, all of the data are not.
+
+```{r}
+busstop_sf <- busstop_sf %>%
+  st_transform(3414)
+```
+
+```{r}
+goodprisch_sf <- goodprisch_sf %>%
+  st_transform(3414)
+```
+
+```{r}
+mrt_sf <- mrt_sf %>%
+  st_transform(3414)
+```
+
+```{r}
+prisch_sf <- prisch_sf %>%
+  st_transform(3414)
+```
+
+```{r}
+shoppingmall_sf <- shoppingmall_sf %>%
+  st_transform(3414)
+```
+
+```{r}
+supermarket_sf <- supermarket_sf %>%
+  st_transform(3414)
+```
+
+### 2.2.3 Checking for invalid geometries
+
+We will be checking invalid geometries using the length(), which() and st_is_valid() functions.
+
+::: panel-tabset
+## Onemap (Extracted)
+
+```{r}
+length(which(st_is_valid(hawkercentre_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(communityclubs_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(eldercare_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(childcare_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(kindergartens_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(library_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(parks_sf) == FALSE))
+```
+
+## Basemap
+
+```{r}
+length(which(st_is_valid(mpsz_sf) == FALSE))
+```
+
+## Self-Sourced
+
+```{r}
+length(which(st_is_valid(busstop_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(goodprisch_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(mrt_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(prisch_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(shoppingmall_sf) == FALSE))
+```
+
+```{r}
+length(which(st_is_valid(supermarket_sf) == FALSE))
+```
+:::
+
+Alright, that aside, we notice that the basemap have a few invalid geometries. This can be corrected using st_make_valid()
+
+```{r}
+mpsz_sf <- st_make_valid(mpsz_sf)
+```
+
+### 2.3.4 Selecting name column
+
+As we only need the name and geometry column, we will use the select() function.
+
+::: panel-tabset
+## Onemap (Extracted)
+
+```{r}
+hawkercentre_sf <- hawkercentre_sf %>%
+  select(1)
+```
+
+```{r}
+communityclubs_sf <- communityclubs_sf %>%
+  select(1)
+```
+
+```{r}
+eldercare_sf <- eldercare_sf %>%
+  select(1)
+```
+
+```{r}
+childcare_sf <- childcare_sf %>%
+  select(1)
+```
+
+```{r}
+kindergartens_sf <- kindergartens_sf %>%
+  select(1)
+```
+
+```{r}
+library_sf <- library_sf %>%
+  select(1)
+```
+
+```{r}
+parks_sf <- parks_sf %>%
+  select(1)
+```
+
+## Self-sourced
+
+```{r}
+busstop_sf <- busstop_sf %>%
+  select(1)
+```
+
+```{r}
+goodprisch_sf <- goodprisch_sf %>%
+  select(1)
+```
+
+```{r}
+mrt_sf <- mrt_sf %>%
+  select(1)
+```
+
+```{r}
+prisch_sf <- prisch_sf %>%
+  select(1)
+```
+
+```{r}
+shoppingmall_sf <- shoppingmall_sf %>%
+  select(1)
+```
+
+```{r}
+supermarket_sf <- supermarket_sf %>%
+  select(1)
+```
+:::
+
+### 2.3.5 Checking for missing values
+
+What is more scary than missing geometries? Missing values, of course! That is a huge no no. Let us check missing values with is.na().
+
+::: panel-tabset
+## Onemap (Extracted)
+
+```{r}
+hawkercentre_sf[rowSums(is.na(hawkercentre_sf))!=0,]
+```
+
+```{r}
+communityclubs_sf[rowSums(is.na(communityclubs_sf))!=0,]
+```
+
+```{r}
+eldercare_sf[rowSums(is.na(eldercare_sf))!=0,]
+```
+
+```{r}
+childcare_sf[rowSums(is.na(childcare_sf))!=0,]
+```
+
+```{r}
+kindergartens_sf[rowSums(is.na(kindergartens_sf))!=0,]
+```
+
+```{r}
+library_sf[rowSums(is.na(library_sf))!=0,]
+```
+
+```{r}
+parks_sf[rowSums(is.na(parks_sf))!=0,]
+```
+
+## Basemap
+
+```{r}
+mpsz_sf[rowSums(is.na(mpsz_sf))!=0,]
+```
+
+## Self-Sourced
+
+```{r}
+busstop_sf[rowSums(is.na(busstop_sf))!=0,]
+```
+
+```{r}
+goodprisch_sf[rowSums(is.na(goodprisch_sf))!=0,]
+```
+
+```{r}
+mrt_sf[rowSums(is.na(mrt_sf))!=0,]
+```
+
+```{r}
+prisch_sf[rowSums(is.na(prisch_sf))!=0,]
+```
+
+```{r}
+shoppingmall_sf[rowSums(is.na(shoppingmall_sf))!=0,]
+```
+
+```{r}
+supermarket_sf[rowSums(is.na(supermarket_sf))!=0,]
+```
+:::
+
+# 3 Exploratory Data Analysis
+
+For this section, we will be visualising data with tmap! For colour coding purposes,
+
+-   Blue denotes public space and transport
+
+-   Red denotes education
+
+-   Green denotes park
+
+-   Purple denotes elder care :-)
+
+::: panel-tabset
+## Hawker centers
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(hawkercentre_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Community clubs
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(communityclubs_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Elderly care
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(eldercare_sf) +
+  tm_dots(col = "purple", size = 0.04)
+```
+
+## Childcare
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(childcare_sf) +
+  tm_dots(col ="red", size = 0.04)
+```
+
+## Kindergarten
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(kindergartens_sf) +
+  tm_dots(col = "red", size = 0.04)
+```
+
+## Library
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(library_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Parks
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(parks_sf) +
+  tm_dots(col = "green", size = 0.04)
+```
+
+## Bus stop
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(busstop_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Good primary school
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(goodprisch_sf) +
+  tm_dots(col = "red", size = 0.04)
+```
+
+## Mrt
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(mrt_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Primary school
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(prisch_sf) +
+  tm_dots(col = "red", size = 0.04)
+```
+
+## Shopping mall
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(shoppingmall_sf) +
+  tm_dots(col = "blue", size = 0.04)
+```
+
+## Supermarket
+
+```{r}
+tmap_mode("plot")
+tm_shape(mpsz_sf) +
+  tm_polygons(alpha = 0.3) +
+tm_shape(supermarket_sf) +
+  tm_dots(col = "blue", size = 0.04)
 ```
 :::
