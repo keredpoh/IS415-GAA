@@ -14,25 +14,21 @@ editor: visual
 
 Several things influence housing costs. Some of them have a worldwide scope, such the overall health of a nation's economy or the level of inflation. Some may focus more on the properties themselves. You can further divide these characteristics into structural and geographic ones.
 
-Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and biasness.
+Geographical Weighted Models were introduced for enhancing predictive model for housing resale prices as traditional price predictive models failed to take account the spatial correlation and heterogeneity in geographical aspects which caused inaccuracy and bias.
 
 ## 1.1 Loading the data
 
 ```{r}
 pacman::p_load('sf', 'tidyverse', 'tmap', 'spdep', 'onemapsgapi', 'units', 'matrixStats', 'readxl', 'jsonlite', 'olsrr', 'corrplot', 'ggpubr', 'GWmodel',
-'devtools', 'kableExtra', 'plotly', 'ggthemes')
+'devtools', 'kableExtra', 'plotly', 'ggthemes', 'ranger', 'Metrics')
 ```
 
 ## 1.2 Data set used
 
 ```{r}
-# initialise a dataframe of our aspatial and geospatial dataset details
 datasets <- data.frame(
   Type=c("Aspatial",
          "Geospatial",
-         "Geospatial",
-         "Geospatial",
-         "Geospatial",
          
          "Geospatial - Extracted",
          "Geospatial - Extracted",
@@ -42,34 +38,31 @@ datasets <- data.frame(
          "Geospatial - Extracted",
          "Geospatial - Extracted",
          
+         "Geospatial - Selfsourced",
          "Geospatial - Selfsourced",
          "Geospatial - Selfsourced",
          "Geospatial - Selfsourced",
          "Geospatial - Selfsourced"),
   
   Name=c("Resale Flat Prices",
-         "Singapore National Boundary",
-         "Master Plan 2014 Subzone Boundary (Web)",
-         "MRT & LRT Locations Aug 2021",
-         "Bus Stop Locations Aug 2021",
+         "Master Plan 2019 Subzone Boundary (Web)",
          
          "Childcare Services",
+         "Community Clubs",
          "Eldercare Services",
          "Hawker Centres",
          "Kindergartens",
          "Parks",
-         "Supermarkets",
-         "Primary Schools",
+         "Libraries",
          
-         "Community Health Assistance Scheme (CHAS) Clinics",
-         "Integrated Screening Programme (ISP) Clinics",
-         "Public, Private and Non-for-profit Hospitals",
-         "Shopping Mall SVY21 Coordinates`"),
+         
+         "Bus Stop Locations Aug 2021",
+         "MRT & LRT Locations Aug 2021",
+         "Supermarkets",
+         "Shopping Mall SVY21 Coordinates", 
+         "Primary School"),
   
   Format=c(".csv", 
-           ".shp", 
-           ".shp", 
-           ".shp", 
            ".shp",
            
            ".shp", 
@@ -80,16 +73,14 @@ datasets <- data.frame(
            ".shp",
            ".shp",
            
+           ".shp",
            ".kml",
            ".shp",
-           ".xlsx",
+           ".shp",
            ".csv"),
   
   Source=c("[data.gov.sg](https://data.gov.sg/dataset/resale-flat-prices)",
-           "[data.gov.sg](https://data.gov.sg/dataset/national-map-polygon)",
            "[data.gov.sg](https://data.gov.sg/dataset/master-plan-2014-subzone-boundary-web)",
-           "[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=Train)",
-           "[LTA Data Mall](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=bus%20stop)",
            
            "[OneMap API](https://www.onemap.gov.sg/docs/)",
            "[OneMap API](https://www.onemap.gov.sg/docs/)",
@@ -99,20 +90,17 @@ datasets <- data.frame(
            "[OneMap API](https://www.onemap.gov.sg/docs/)",
            "[OneMap API](https://www.onemap.gov.sg/docs/)",
            
-           "[data.gov.sg](https://data.gov.sg/dataset/chas-clinics)",
-           "[OneMap API](https://www.onemap.gov.sg/docs/)",
-           "Self-sourced and collated (section 2.3)",
-           "[Mall SVY21 Coordinates Web Scaper](https://github.com/ValaryLim/Mall-Coordinates-Web-Scraper)")
+           "[datamall.lta](https://datamall.lta.gov.sg/content/datamall/en/search_datasets.html?searchText=bus%20stop)",
+           "[data.gov](https://data.gov.sg/dataset/lta-mrt-station-exit)",
+           "[Onemap.gov](https://www.onemap.gov.sg/main/v2/essentialamenities)",
+           "[Valery Lim's Github](https://github.com/ValaryLim/Mall-Coordinates-Web-Scraper/blob/master/mall_coordinates_updated.csv)",
+           "[data.gov](https://data.gov.sg/dataset/school-directory-and-information)")
   )
 
-# with reference to this guide on kableExtra:
-# https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
-# kable_material is the name of the kable theme
-# 'hover' for to highlight row when hovering, 'scale_down' to adjust table to fit page width
 library(knitr)
 library(kableExtra)
 kable(datasets, caption="Datasets Used") %>%
-  kable_material("hover", latex_options="scale_down")
+  kable_material("hover", latex_options = "scale_down")
 ```
 
 # 2 Data Preparation
@@ -135,7 +123,9 @@ glimpse(resale)
 ```
 :::
 
-We will be looking at 3 room flats, within January of 2021 to Febuary of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
+On a personal note, I am currently staying in a 3 room flat at Bedok, and my family is planning to move soon. Hence, I have decided to scope it down to 3 room flats so that I can roughly gauge how much my family can resell the house! It will be interesting to look at how various geographical factors affect resale prices :-)
+
+As such , we will be looking at 3 room flats, within January of 2021 to February of 2023, which will be separated again later on. This is done by using filter() on flat_type and month.
 
 ```{r}
 resale_sub <-  resale %>%
@@ -159,7 +149,7 @@ unique(resale_sub$month)
 unique(resale_sub$flat_type)
 ```
 
-# Viewing rs_sub
+# Viewing resale_sub
 
 ```{r}
 glimpse(resale_sub)
@@ -169,11 +159,11 @@ glimpse(resale_sub)
 
 ### 2.1.2 Aspatial Wrangling
 
-As we can see from the resale_sub, the variable remaining lease and lease commence date essentially provides the same information. We will only be including remaining lease, as it directly tells us the remaining year.
+As we can see from the resale_sub, the variable remaining lease and lease commence date essentially provides the same information. We will only be including remaining lease, as it directly tells us the remaining year. Most importantly, this will help us to ensure that the variables are not perfectly collinear during our regression later!
 
 ```{r}
 resale_sub <- resale_sub %>%
-  select(- lease_commence_date)
+  select(-lease_commence_date)
 ```
 
 Additionally, after looking at the resale_sub variables, we notice that remaining lease is \<chr\>. We would want it to be numeric, as it will be beneficial for us later on. We will have to first split the months and years in the variable remaining_lease.
@@ -212,25 +202,7 @@ Then, we will combine them together under the new variable remaining lease year.
 ```{r}
 resale_sub <- resale_sub %>%
 mutate(resale_sub, remaining_lease_year = rowSums(resale_sub[, c("remaining_lease_yr", "remaining_lease_mth")]))
-
 ```
-
-Finally, we will select the rows we want using select(). Let us use glimpse to view the variables.
-
-::: panel-tabset
-# Code Chunk
-
-```{r}
-resale_sub <- resale_sub %>%
-  select(month, town, flat_type, block, street_name, storey_range, floor_area_sqm, remaining_lease_year)
-```
-
-# Glimpse
-
-```{r}
-glimpse(resale_sub)
-```
-:::
 
 By referencing to our favorite senior, [Megan](https://is415-msty.netlify.app/posts/2021-10-25-take-home-exercise-3/?panelset=self-sourced&panelset6=glimpse%28%29#data-wrangling-aspatial-data), she advised that we replace "SAINT" with "ST", as onemap spells it that way in the variable street_name, which will be a bit confusing. We can change that by using the code chunk below
 
@@ -292,18 +264,58 @@ for (i in 1:nrow(resale_sub)){
 
 Let us save it into a RDS object
 
-```{r}
+```{r, eval = FALSE}
 saveRDS(resale_sub, file="resale_sub", compress=FALSE)
 ```
 
 We will then assign the RDS object to resale_sub
 
 ```{r}
-resale_sub <-readRDS("resale_sub")
-resale_sub
+resale_sub <- readRDS("resale_sub")
 ```
 
-## 2.2 Geospatial data
+### 2.1.3 Creating ordinal arrangement for floor level
+
+We will create an ordinal column for the floor level for the purpose of our analysis later on! We will first use unique() to identify all of the values from storey_range
+
+```{r}
+unique(resale_sub$storey_range)
+```
+
+We will then write it down into a vector, and assign it to levels. After that, we will assign story_ordinal by using seq_along() and changing story_ordinal into numeric using as.numeric().
+
+```{r}
+levels <- c("01 TO 03", "04 TO 06", "07 TO 09", "10 TO 12", "13 TO 15", "16 TO 18", "19 TO 21", "22 TO 24", "25 TO 27", "28 TO 30", "31 TO 33", "34 TO 36", "37 TO 39", "40 TO 42", "43 TO 45", "46 TO 48", "49 TO 51") 
+
+story_ordinal <- seq_along(levels)
+
+resale_sub$Story_Ordinal <- story_ordinal[match(resale_sub$storey_range, levels)]  
+
+levels(resale_sub$Story_Ordinal) <- levels
+
+resale_sub <- resale_sub |> 
+  mutate(Story_Ordinal=as.numeric(Story_Ordinal))
+```
+
+### 2.1.4 Mutating remaining columns
+
+We noticed that month is still \<chr\>, which is able to be changed by as.Date. By referencing to this [website,](https://www.statology.org/convert-strings-to-dates-in-r/) %Y denotes the year with century, %m for month, and %d for day.
+
+```{r}
+resale_sub <- resale_sub %>% 
+  mutate(month = as.Date(paste(month, "-01"), format ="%Y-%m-%d"))
+```
+
+### 2.1.5 Checking for duplicates
+
+Finally, let us check for duplicates. We are good to go!
+
+```{r}
+sum(is.na(resale_sub$LATITUDE))
+sum(is.na(resale_sub$LONGITUDE))
+```
+
+## Geospatial data
 
 As mentioned above, we will be extracting geospatial data from Onemap. the codes used below will require the onemapsgapi package, which is already loaded in 1.1. I will break down the steps to extract data from Onemap as simple as possible!
 
@@ -907,3 +919,589 @@ tm_shape(supermarket_sf) +
   tm_dots(col = "blue", size = 0.04)
 ```
 :::
+
+# 4 Locational factors
+
+With aspatial and geospatial data in set, we will now be setting locational factors which will enable us to view the proximity from one location to the area of interest.
+
+## 4.1 CBD location
+
+We will be taking reference from this [website](https://www.latlong.net/place/downtown-core-singapore-20616.html), to get the latitude and longitude of downtown core. SImilarly, we will convert it into the correct CRS, which is 3414.
+
+```{r}
+lat <- 1.287953
+lng <- 103.851784
+
+cbd_sf <- data.frame(lat, lng) %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+## 4.2 Converting resale data into sf
+
+Notice that our resale data, resale_sub do not have any CRS.
+
+```{r}
+st_crs(resale_sub)
+```
+
+In that case, we will be assigning CRS using st_as_sf to convert it into a sf object, while inserting CRS 3414 using st_transform.
+
+```{r}
+resale_sub <- st_as_sf(resale_sub, coords = c("LONGITUDE", "LATITUDE"), crs = 4326) %>%
+  st_transform(crs = 3414)
+```
+
+Let us do a check. Looking good!
+
+```{r}
+st_crs(resale_sub)
+```
+
+## 4.3 Proximity distance calculation
+
+Earlier, we were just discussing about how locational factors will help us view the proximity from one location to the other. By referencing to our favourite senior, Megan [again](https://is415-msty.netlify.app/posts/2021-10-25-take-home-exercise-3/?panelset=self-sourced&panelset6=glimpse%28%29&panelset5=recreational%252Flifestyle#data-wrangling-aspatial-data), we will be calculating as such using st_distance() to get the shortest distance, together with rowMins().
+
+```{r}
+proximity <- function(df1, df2, varname) {
+  dist_matrix <- st_distance(df1, df2) |> 
+    drop_units()
+  df1[,varname] <- rowMins(dist_matrix)
+  return(df1)
+}
+```
+
+We will then input all the proximity into all of our data, using the newly created proximity() function.
+
+```{r, eval = FALSE}
+resale_sub <-
+  proximity(resale_sub, cbd_sf, "PROX_CBD") %>%
+  proximity(., communityclubs_sf, "PROX_COMMUNITYCLUBS") %>%
+  proximity(., childcare_sf, "PROX_CHILDCARE") %>%
+  proximity(., kindergartens_sf, "PROX_KINDERGARTEN") %>%
+  proximity(., eldercare_sf, "PROX_ELDERCARE") %>%
+  proximity(., hawkercentre_sf, "PROX_HAWKER") %>%
+  proximity(., busstop_sf, "PROX_BUSSTOP") %>%
+  proximity(., mrt_sf, "PROX_MRT") %>%
+  proximity(., library_sf, "PROX_LIBRARY") %>%
+  proximity(., parks_sf, "PROX_PARK") %>%
+  proximity(., goodprisch_sf, "PROX_GOODPRISCH") %>%
+  proximity(., shoppingmall_sf, "PROX_MALL") %>%
+  proximity(., supermarket_sf, "PROX_SPRMKT")
+```
+
+## 4.4 Facility count within radius calculation
+
+As the saying goes, size is not everything. Knowing the distance between one point to the other is simply not enough. Hence, we will use st_distance() and rowSums() to find the particular facility within the radius!
+
+```{r}
+num_radius <- function(df1, df2, varname, radius) {
+  dist_matrix <- st_distance(df1, df2) %>%
+    drop_units() %>%
+    as.data.frame()
+  df1[,varname] <- rowSums(dist_matrix <= radius)
+  return(df1)
+}
+```
+
+For the scope of our assignment, we are required to set:
+
+-   Numbers of kindergartens within 350m
+
+-   Numbers of childcare centres within 350m
+
+-   Numbers of bus stop within 350m
+
+-   Numbers of primary school within 1km
+
+Let us do that then!
+
+```{r, eval = FALSE}
+resale_sub <- 
+  num_radius(resale_sub, kindergartens_sf, "NUM_KINDERGARTEN", 350) %>%
+  num_radius(., childcare_sf, "NUM_CHILDCARE", 350) %>%
+  num_radius(., busstop_sf, "NUM_BUSSTOP", 350) %>%
+  num_radius(., prisch_sf, "NUM_PRIMARYSCH", 1000)
+```
+
+## 4.5 Saving as RDS file
+
+With that, let us save the updated resale_sub as RDS so that we can use it later on!
+
+```{r, eval = FALSE}
+saveRDS(resale_sub, "data/final/resale_sub.rds")
+```
+
+And assign it back into resale_sub!
+
+```{r}
+resale_sub <- read_rds("data/final/resale_sub.rds")
+```
+
+Let us glimpse resale_sub now. Looking good!
+
+```{r}
+glimpse(resale_sub)
+```
+
+# 5 Regressions
+
+As we will be doing prediction models, we will be exploring various regressions!
+
+## 5.1 Visualising correlation matrix
+
+Recall that we have already removed lease_commence_date earlier on to prevent perfect multi-colinearity. However, we should visualise the matrix to ensure that no variables are co-linear. Note that we have dropped resale_price, as that is the dependent variable.
+
+```{r}
+resale_corm <- resale_sub %>% 
+  st_drop_geometry() %>% 
+  select_if(is.numeric) %>% 
+  select(-resale_price)
+corrplot::corrplot(cor(resale_corm), 
+                   diag = FALSE, 
+                   order = "AOE",
+                   tl.pos = "td", 
+                   tl.cex = 0.4, 
+                   method = "number", 
+                   type = "upper")
+```
+
+Oh my! looks like we forgot that we combined remaining_lease_year from remaining_lease_yr. This shows that we cannot be complacent. Lucky for us, we found it out before anything! Let us remove it using select().
+
+```{r}
+resale_sub <- resale_sub %>%
+  select(-remaining_lease_yr, -remaining_lease_mth)
+```
+
+## 5.2 Splitting into training and testing data
+
+For the purpose on this assignment, we will be splitting the data into:
+
+-   Testing data, ranging from January 2023 to February 2023
+
+-   Training data, from January 2021 to December 2022
+
+```{r}
+test_data <- resale_sub %>% 
+  filter(month >= "2023-01-01" & month <= "2023-02-28")
+
+train_data <- resale_sub %>%
+  filter(month >= "2021-01-01" & month <= "2022-12-31")
+```
+
+## 5.3 Multi-linear regression (non-spatial)
+
+Let us build a multi-linear regression now. The beauty of building a regression is that we can choose what to add and what to not add, as long as it is justified. We will not be adding flat model, as we narrowed the scope to 3 room flats. Geometry will not be useful as well. remaining_lease will be omitted as well, as we have remaining_lease_year.
+
+::: panel-tabset
+# Glimpse test_data
+
+```{r}
+glimpse(test_data)
+```
+
+# Regression
+
+```{r}
+multi_lr <- lm(resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month, data = train_data)
+```
+
+# Summary
+
+```{r}
+summary(multi_lr)
+```
+
+# Saving as RDS
+
+```{r, eval = FALSE}
+write_rds(multi_lr, "data/regmodels/multi_lr.rds")
+```
+
+# Reading RDS
+
+```{r}
+multi_reg <- read_rds("data/regmodels/multi_lr.rds")
+multi_reg
+```
+:::
+
+## 5.4 GWR predictive method
+
+We will convert sf into sp, so that it can be useful in predicting resale prices of 3 room HDB flats. We will convert using as_Spatial()
+
+```{r}
+train_data_sp <- as_Spatial(train_data)
+train_data_sp
+```
+
+## 5.5 Computing adaptive bandwidth
+
+Similarly, after computing the bandwidth, we will use write_rds() and read_rds for efficiency!
+
+::: panel-tabset
+# Adaptive bandwidth
+
+```{r, eval = FALSE}
+bw_adaptive <- bw.gwr(resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month, data  = train_data_sp,
+                  approach = "CV",
+                  kernel = "gaussian",
+                  adaptive = TRUE,
+                  longlat = FALSE)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(bw_adaptive, "data/regmodels/bw_adaptive.rds")
+```
+
+# Read RDS
+
+```{r}
+bw_adaptive <- read_rds("data/regmodels/bw_adaptive.rds")
+```
+:::
+
+## **Constructing adaptive bandwidth GWR**
+
+Similarly to above, we will use write_rds() to save, and read_rds() to read the adaptive gwr
+
+::: panel-tabset
+# Adaptive GWR
+
+```{r, eval = FALSE}
+gwr_adaptive <- gwr.basic(resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month,
+                data = train_data_sp,
+                          bw = bw_adaptive, 
+                          kernel = 'gaussian', 
+                          adaptive = TRUE,
+                          longlat = FALSE)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(gwr_adaptive, "data/regmodels/gwr_adaptive.rds")
+```
+
+# Read RDS
+
+```{r}
+gwr_adaptive <- read_rds("data/regmodels/gwr_adaptive.rds")
+```
+:::
+
+## 5.6 Extracting Coordinates
+
+With reference to the previous in class exercise, we were taught that we need to use st_coordinates to extract the x & y coordinates of the dataset. We will be using write_rds(), and read_rds() again.
+
+::: panel-tabset
+# Code chunk
+
+```{r, eval = FALSE}
+coords <- st_coordinates(resale_sub)
+coords_training <- st_coordinates(train_data)
+coords_testing <- st_coordinates(test_data)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(coords_training, "data/regmodels/coords_training.rds" )
+write_rds(coords_testing, "data/regmodels/coords_testing.rds")
+```
+
+# Read RDS
+
+```{r}
+coords_training <- read_rds("data/regmodels/coords_training.rds")
+coords_testing <- read_rds("data/regmodels/coords_testing.rds")
+```
+:::
+
+## 5.7 Dropping geometry field
+
+We will do so by using st_drop_geometry()
+
+::: panel-tabset
+# Code chunk
+
+```{r, eval = FALSE}
+train_data <- st_drop_geometry(train_data)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(train_data, "data/regmodels/train_data.rds")
+```
+
+# Read RDS
+
+```{r}
+train_data <- read_rds("data/regmodels/train_data.rds")
+```
+:::
+
+## 5.8 Random forest model
+
+We use set.seed() to ensure that the same value gets generated in our random forest model. Not so random now, is it?
+
+::: panel-tabset
+# Code chunk
+
+```{r, eval = FALSE}
+set.seed(1234) 
+
+forest <- ranger(resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month, data = train_data)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(forest, "data/regmodels/forest.rds")
+```
+
+# Read RDS
+
+```{r}
+forest <- read_rds("data/regmodels/forest.rds")
+```
+
+# Results
+
+```{r}
+print(forest)
+```
+:::
+
+## 5.9 Calibrating geographic random forest using GRF
+
+For this assignment, will be using 30 trees!
+
+Adaptive bandwidth
+
+```{r, eval = FALSE}
+bw_grf_adaptive <- grf.bw(formula = resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month,
+            dataset = train_data, 
+            kernel = "adaptive", 
+            coords = coords_training, 
+            trees = 30)
+
+```
+
+![](images/bandwidth.png)
+
+```{r, eval = FALSE}
+write_rds(bw_grf_adaptive, "data/regmodels/bw_grf_adaptive.rds")
+```
+
+We will be assigning 638, which is the highest R2 score to bw_grf_adaptive before running our grf
+
+```{r}
+bw_grf_adaptive <- 638
+```
+
+## 5.10 **Calibrating Geographical Random Forest Model**
+
+We will be using grf() to calibrate a model to predict HDB resale price.
+
+::: panel-tabset
+```{r, eval = FALSE}
+set.seed(1234)
+
+gwRF_adaptive <- grf(formula = resale_price~ Story_Ordinal + remaining_lease_year + floor_area_sqm + PROX_CBD + PROX_ELDERCARE + PROX_HAWKER + PROX_PARK + PROX_LIBRARY + PROX_COMMUNITYCLUBS + PROX_BUSSTOP + PROX_MALL + PROX_SPRMKT + PROX_GOODPRISCH + PROX_MRT + NUM_CHILDCARE + NUM_KINDERGARTEN + NUM_PRIMARYSCH + month,
+                   dframe = train_data,
+                   bw = bw_grf_adaptive,
+                   kernel = "adaptive",
+                   coords = coords_training,
+                   ntree = 30)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(gwRF_adaptive, "data/regmodels/gwRF_adaptive.rds")
+```
+
+# Read RDS
+
+```{r}
+gwRF_adaptive <- read_rds("data/regmodels/gwRF_adaptive.rds")
+```
+:::
+
+Here are the snippets of the output gwRF for better visualisation!
+
+![](images/table%20pic.png){width="623" height="233"}
+
+![](images/global%20summary%201.jpg){width="630" height="302"}
+
+![](images/global%20summary%202.jpg){width="421"}
+
+# 6 Predictions
+
+Since we are done with the training data, this section will deal with testing data for our prediction
+
+## 6.1 Dropping geometry for test data
+
+::: panel-tabset
+# Code chunk
+
+```{r, eval = FALSE}
+test_data <- cbind(test_data, coords_testing) %>%
+  st_drop_geometry()
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(test_data, "data/regmodels/test_data.rds")
+```
+
+# Read RDS
+
+```{r}
+test_data <- read_rds("data/regmodels/test_data.rds")
+```
+:::
+
+## 6.2 Predicting with test data
+
+We will use predict.grf() to predict the resale value by using the test data and gwRF_adaptive model calibrated above!
+
+::: panel-tabset
+# Code chunk
+
+```{r, eval = FALSE}
+gwRF_pred <- predict.grf(gwRF_adaptive, 
+                           test_data, 
+                           x.var.name = "X",
+                           y.var.name = "Y", 
+                           local.w = 1,
+                           global.w = 0)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+GRF_pred <- write_rds(gwRF_pred, "data/regmodels/gwRF_pred.rds")
+```
+:::
+
+## 6.3 **Conversion of predicting output into data frame**
+
+We will convert the output using as.data.frame()
+
+```{r}
+GRF_pred <- read_rds("data/regmodels/gwRF_pred.rds")
+GRF_pred_df <- as.data.frame(GRF_pred)
+```
+
+Next, we will be binding the predicted output into the test data using cbind()
+
+::: panel-tabset
+# Cbind
+
+```{r}
+test_data_p <- cbind(test_data, GRF_pred_df)
+```
+
+# Write RDS
+
+```{r, eval = FALSE}
+write_rds(test_data_p, "data/regmodels/test_data_p.rds")
+```
+
+# Read RDS
+
+```{r}
+test_data_p <- read_rds("data/regmodels/test_data_p.rds")
+```
+:::
+
+## 6.4 Calculating root mean square error
+
+rsme() will help us measure how far the predicted values are from the observed values in a regression analysis
+
+```{r}
+rmse(test_data_p$resale_price, 
+     test_data_p$GRF_pred)
+```
+
+## 6.5 **Visualising the predicted values**
+
+Let us visualise it on a scatterplot, where we plot actual resale price against predicted resale price
+
+```{r}
+ggplot(data = test_data_p,
+       aes(x = GRF_pred,
+           y = resale_price)) +
+  geom_point()
+```
+
+# 7 Conclusion
+
+In summary, while both OLS and GWR are regression techniques used to analyze the relationship between variables, GWR is better suited for analyzing spatially varying relationships, while OLS is better suited for analyzing relationships that are constant across space.
+
+## 7.1 OLS vs Geographical weighted methods
+
+The main difference between OLS and GWR is that OLS produces a single set of coefficients that are applicable across the entire data set, while GWR produces a set of coefficients that vary across space, which also means that the strength and direction of the relationship between the dependent variable and independent variables can change depending on the location of the observation, which can be more useful in understanding resale prices of HDB, especially if we are using the model for prediction! Let us prove this below.
+
+::: panel-tabset
+# OLS (non spatial)
+
+```{r}
+multi_reg_df <- predict(multi_reg, test_data)
+multi_reg_test<- cbind(test_data, multi_reg_df)
+
+rmse(multi_reg_test$resale_price, 
+     multi_reg_test$multi_reg_df)
+```
+
+```{r}
+ggplot(data = multi_reg_test,
+       aes(x = multi_reg_df,
+           y = resale_price)) +
+  geom_point() +
+  geom_abline(col = "Red")
+```
+
+# Geographical Random Forest Model
+
+```{r}
+rmse(test_data_p$resale_price, 
+     test_data_p$GRF_pred)
+```
+
+```{r}
+ggplot(data = test_data_p,
+       aes(x = GRF_pred,
+           y = resale_price)) +
+  geom_point() +
+  geom_abline(col = "Red")
+```
+:::
+
+From the scatter plots and the mean square error between both models, we can tell that the OSL aims to minimise residual sum of squares, as the regression line is fitted in that manner. Geographical Random Forest Model on the other hand, aims to reduce mean squared error, which is further supported by the value as computed above.
+
+Hence, we therefore conclude that the Geographical Random Forest Model is better as a basis of predictive model, as compared to Non-spatial OLS.
+
+## 7.2 Possible Improvements
+
+-   If we recall, we ignored the variable flat_type as we assumed it to be 3 room throughout. In real life scenarios, that is not the case as different flat types do in fact have different default layout, which may affect the resale prices of the house. This could be done by potentially creating a binary variable with each of the different variables in flat type.
+
+-   It was also obvious that there were outliers on the scatterplot. These outliers are the real life scenarios of HDB resale prices appearing out in the news where people are selling and buying houses for 1 million dollars. But hey, what can I say? if there is a demand, there will definitely be a supply. Removing those outlier can certainly help the overall model to improve.
+
+-   Lastly, with a stronger device, we could potentially create more trees generated in the gwRF model!
+
+# 8 References
+
+I am super grateful for all of the resources that were made available to me, especially from past seniors and prof kam's in-class resources.
+
+A huge thanks to our favourite senior, [Megan](https://is415-msty.netlify.app/posts/2021-10-25-take-home-exercise-3/), for her work which helped many of us during the initial data wrangling and outsourcing stage!
+
+I also referred to another senior's work, [Aisyah](https://aisyahajit2018-is415.netlify.app/posts/2021-11-07-take-home-exercise-3/), where i found inspiration for creating the remaining_lease_year column!
+
+And of course, most importantly to [Prof Kam's](https://is415-gaa-tskam.netlify.app/in-class_ex/in-class_ex09/in-class_ex09_gwml#calibrating-random-forest-model) in-class exercise 9 for the second half of this take home assignment!
