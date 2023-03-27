@@ -943,5 +943,26 @@
     "title": "In Class Exercise 8",
     "section": "",
     "text": "pacman::p_load(olsrr, ggpubr, sf, spdep, GWmodel, tmap, tidyverse, gtsummary)\n\nGeospatial data\n\nmpsz <- st_read(dsn = \"data/geospatial\",\n                layer =\"MP14_SUBZONE_WEB_PL\") %>%\n  st_transform(crs = 3414)\n\nReading layer `MP14_SUBZONE_WEB_PL' from data source \n  `/Users/keredpoh/Desktop/keredpoh/IS415-GAA/In-class_Ex/In-class_Ex08/data/geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 323 features and 15 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33\nProjected CRS: SVY21\n\n\nAspatial data\n\ncondo_resale = read_csv(\"data/aspatial/Condo_resale_2015.csv\")\n\n\ncondo_resale.sf <- st_as_sf(condo_resale,\n                            coords = c(\"LONGITUDE\", \"LATITUDE\"),\n                            crs = 4326) %>%\n  st_transform(crs = 3414)\n\n\ncondo.mlr <- lm(formula = SELLING_PRICE ~ AREA_SQM + AGE    + \n                  PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE +\n                  PROX_URA_GROWTH_AREA + PROX_HAWKER_MARKET + PROX_KINDERGARTEN + \n                  PROX_MRT  + PROX_PARK + PROX_PRIMARY_SCH + \n                  PROX_TOP_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_SUPERMARKET + \n                  PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD, \n                data=condo_resale.sf)"
+  },
+  {
+    "objectID": "In-class_Ex/in-class_Ex11/In-class_Ex11.html",
+    "href": "In-class_Ex/in-class_Ex11/In-class_Ex11.html",
+    "title": "In-class Exercise 11: Modelling Geographical Accessibility",
+    "section": "",
+    "text": "loading data\n\npacman::p_load(tmap, sf, sp, caret, stplanr, reshape2, broom, tidyverse)"
+  },
+  {
+    "objectID": "In-class_Ex/in-class_Ex11/In-class_Ex11.html#importing-od-data",
+    "href": "In-class_Ex/in-class_Ex11/In-class_Ex11.html#importing-od-data",
+    "title": "In-class Exercise 11: Modelling Geographical Accessibility",
+    "section": "2.1 Importing OD data",
+    "text": "2.1 Importing OD data\n\nodbus <- read_csv(\"data/aspatial/origin_destination_bus_202210.csv\")\n\nChanging numeric to factor using as.factor()\n\nodbus$ORIGIN_PT_CODE <-\n  as.factor(odbus$ORIGIN_PT_CODE)\n\nodbus$DESTINATION_PT_CODE <-\n  as.factor(odbus$DESTINATION_PT_CODE)\n\nExtracting weekday, from 7 to 9 oclock from odbus\n\nodbus7_9 <- odbus %>%\n  filter(DAY_TYPE == \"WEEKDAY\") %>%\n  filter(TIME_PER_HOUR >= 7 &\n           TIME_PER_HOUR <= 9) %>%\n  group_by(ORIGIN_PT_CODE,\n           DESTINATION_PT_CODE) %>%\n  summarise(TRIPS = sum(TOTAL_TRIPS))\n\nWrite rds\n\nwrite_rds(odbus7_9, \"data/rds/odbus7_9.rds\")"
+  },
+  {
+    "objectID": "In-class_Ex/in-class_Ex11/data/geospatial/MPSZ-2019.html",
+    "href": "In-class_Ex/in-class_Ex11/data/geospatial/MPSZ-2019.html",
+    "title": "IS415-GAA",
+    "section": "",
+    "text": "<!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’>     dataset\n\n\n        0 0     false"
   }
 ]
