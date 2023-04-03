@@ -7,7 +7,3 @@ Hi all! my name is Derek and I am currently a Y2 SMU student majoring in Economi
 Check out my Linkedin profile [here](https://www.linkedin.com/in/derekpoh/)!
 
 ![](images/Derek.jpeg)
-
-```{r}
-1 + 1
-```
